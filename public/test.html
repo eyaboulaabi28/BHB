@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <title>صور الاختبار</title>
+
+    <style>
+        body {
+          font-family: Arial, Tahoma;
+          background: #f5f5f5;
+          padding: 20px;
+        }
+
+        h2 {
+          color: #0E4D92;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+
+        .grid {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          max-width: 600px;
+          margin: auto;
+        }
+
+        .photo-card {
+          background: white;
+          padding: 10px;
+          border-radius: 8px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .photo-title {
+          font-size: 14px;
+          font-weight: bold;
+          margin-bottom: 8px;
+          text-align: center;
+        }
+
+        img {
+          width: 100%;
+          border-radius: 6px;
+          border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>🧪 صور الاختبار</h2>
+<div class="grid" id="images"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCcp7l5I4ftPHAp6F6CMPR3pzRbNVx9dRw",
+      authDomain: "bhbgroup-ed1bc.firebaseapp.com",
+      projectId: "bhbgroup-ed1bc",
+      storageBucket: "bhbgroup-ed1bc.firebasestorage.app",
+      messagingSenderId: "259953238721",
+      appId: "1:259953238721:web:cdff9688f9f47ed8856a40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const subTestId = params.get("subTestId");
+
+    if (!subTestId) {
+      document.body.innerHTML += "<p style='color:red;text-align:center'>❌ subTestId manquant</p>";
+      throw new Error("No subTestId");
+    }
+
+    const q = query(
+      collection(db, "tasksTest"),
+      where("subTestId", "==", subTestId)
+    );
+
+    const snapshot = await getDocs(q);
+    const container = document.getElementById("images");
+
+    if (snapshot.empty) {
+      container.innerHTML = "<p style='text-align:center'>لا توجد صور</p>";
+    }
+
+    let index = 1;
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const images = data.images || [];
+
+      images.forEach(url => {
+        const card = document.createElement("div");
+        card.className = "photo-card";
+
+        const title = document.createElement("div");
+        title.className = "photo-title";
+        title.textContent = `الصورة رقم ${index}`;
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.loading = "lazy";
+
+        card.appendChild(title);
+        card.appendChild(img);
+        container.appendChild(card);
+
+        index++;
+      });
+    });
+</script>
+
+</body>
+</html>
