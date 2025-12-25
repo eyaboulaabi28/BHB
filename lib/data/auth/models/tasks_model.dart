@@ -6,7 +6,7 @@ class Tasks {
   final List<String>? imagesAfter;
   final String? subStageId;
   final String? projectId;
-
+  final String? floorId;
   Tasks({
     this.id,
     this.description,
@@ -15,6 +15,7 @@ class Tasks {
     this.imagesAfter,
     this.subStageId,
     this.projectId,
+    this.floorId,
 
   });
 
@@ -26,6 +27,8 @@ class Tasks {
       'imagesAfter': imagesAfter,
       'subStageId': subStageId,
       'projectId': projectId,
+      'floorId': floorId,
+
     };
   }
 
@@ -38,6 +41,8 @@ class Tasks {
       imagesAfter: List<String>.from(map['imagesAfter'] ?? []),
       subStageId: map['subStageId'],
       projectId: map['projectId'],
+      floorId: map['floorId'],
+
     );
   }
 }

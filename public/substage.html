@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
+    <title>صور المرحلة الفرعية</title>
     <style>
         body {
           font-family: Arial, Tahoma;
@@ -55,6 +56,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // ⚡ Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCcp7l5I4ftPHAp6F6CMPR3pzRbNVx9dRw",
       authDomain: "bhbgroup-ed1bc.firebaseapp.com",
@@ -67,17 +69,21 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // ⚡ Récupérer subStageId et projectId depuis l'URL
     const params = new URLSearchParams(window.location.search);
     const subStageId = params.get("subStageId");
+    const projectId = params.get("projectId");
 
-    if (!subStageId) {
-      document.body.innerHTML += "<p style='color:red;text-align:center'>❌ subStageId manquant</p>";
-      throw new Error("No subStageId");
+    if (!subStageId || !projectId) {
+      document.body.innerHTML += "<p style='color:red;text-align:center'>❌ subStageId ou projectId manquant</p>";
+      throw new Error("subStageId ou projectId manquant");
     }
 
+    // ⚡ Requête Firestore : filtrer par subStageId ET projectId
     const q = query(
       collection(db, "tasks"),
-      where("subStageId", "==", subStageId)
+      where("subStageId", "==", subStageId),
+      where("projectId", "==", projectId)
     );
 
     const snapshot = await getDocs(q);
@@ -86,18 +92,17 @@
     if (snapshot.empty) {
       container.innerHTML = "<p style='text-align:center'>لا توجد صور</p>";
     }
-
     snapshot.forEach(doc => {
       const data = doc.data();
-
+      // Combiner imagesBefore et imagesAfter
       const allImages = [
         ...(data.imagesBefore || []),
         ...(data.imagesAfter || [])
       ];
-
       let index = 1;
-
       allImages.forEach(url => {
+        if (!url) return;
+
         const card = document.createElement("div");
         card.className = "photo-card";
 
@@ -108,7 +113,6 @@
         const img = document.createElement("img");
         img.src = url;
         img.loading = "lazy";
-
         card.appendChild(title);
         card.appendChild(img);
         container.appendChild(card);

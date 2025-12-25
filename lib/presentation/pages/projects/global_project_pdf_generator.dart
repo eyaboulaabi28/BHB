@@ -4,6 +4,7 @@ import 'package:app_bhb/data/auth/models/tasks_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_tasks.dart';
 import 'package:app_bhb/presentation/pages/projects/stage_section_builder.dart';
 import 'package:app_bhb/presentation/pages/projects/sub_stages_section_builder.dart';
+import 'package:app_bhb/presentation/pages/projects/sub_stages_section_builder1.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
@@ -278,265 +279,178 @@ class GlobalStagesPdfGenerator {
               ],
             ),
           ),
-          build: (_) => [
-            pw.Center(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Text(
-                    "التقرير العام للمشروع",
-                    style: pw.TextStyle(
-                      font: arabicFont,
-                      fontFallback: [emojiFont],
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColor.fromHex('#022C43'),
-                    ),
-                    textDirection: pw.TextDirection.rtl,
-                  ),
-                  pw.SizedBox(height:3),
-                  pw.Container(
-                    height: 4,
-                    width: 150,
-                    decoration: pw.BoxDecoration(
-                      gradient: pw.LinearGradient(
-                        colors: [
-                          PdfColor.fromHex('#FFD700'),
-                          PdfColor.fromHex('#022C43'),
-                        ],
-                      ),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 10),
-            if (projectDetails != null) ...[
-              pw.SizedBox(height: 8),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  // Ligne 1 (bleu foncé)
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
+          build: (_) {
+            final widgets = <pw.Widget>[];
 
-                      buildInfoBox(projectDetails?.ownerName ?? "-", "اسم المالك", "Owner's Name", arabicFont, emojiFont, icon: "👤",),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.projectName ?? "-", "اسم المشروع", "Project Name", arabicFont, emojiFont, icon: "📝",),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.district ?? "-", "البلدية", "Sub Municipality", arabicFont, emojiFont, icon: "📍"),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.municipality ?? "-", "المدينة", "Municipal", arabicFont, emojiFont, icon: "🧱"),
-                    ],
-                  ),
-                  pw.SizedBox(height: 10),
-                  // Ligne 2
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.planNumber ?? "-", "رقم المخطط", "Plan Number", arabicFont, emojiFont, icon: "📌",isAlternate: true),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.plotNumber ?? "-", "رقم قطعة الارض", "Land Number", arabicFont, emojiFont, icon: "📄",isAlternate: true),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.licenseNumber ?? "-", "رقم رخصة البناء", "Building Permit Number", arabicFont, emojiFont, icon: "⚠",isAlternate: true),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.buildingDescription ?? "-", "وصف البناء", "Building Description", arabicFont, emojiFont, icon: "🏠", isAlternate: true),
-                    ],
-                  ),
-                  pw.SizedBox(height: 10),
-                  // Ligne 3 (bleu foncé)
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.reportDate?? "-", "تاريخ التقرير", "Report date", arabicFont, emojiFont, icon: "📅"),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.floorsCount ?? "-", "عدد الادوار", "Number Of Floors", arabicFont, emojiFont, icon: "🧮"),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.buildingType ?? "-", "نوع المبنى", "Building Type", arabicFont, emojiFont, icon: "🏭"),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.supervisorOffice ?? "-", "المكتب الهندسي المشرف", "Supervising engineering office", arabicFont, emojiFont, icon: "🏣"),
-                    ],
-                  ),
-                  pw.SizedBox(height: 10),
-                  // Ligne
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.phaseResult ?? "-", "نتيجة فحص المرحلة", "Check Result", arabicFont, emojiFont, icon: "✅", isAlternate: true),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.engineerName ?? "-", "اسم المهندس المشرف", "Name Of Supervising Engineer", arabicFont, emojiFont, icon: "👷 ", isAlternate: true),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.contractor?? "-", "مقاول البناء", "Construction Contractor", arabicFont, emojiFont, icon: "👨", isAlternate: true),
-                      pw.SizedBox(width: 4),
-                      buildInfoBox(projectDetails?.designerOffice ?? "-", "مكتب المصمم المعتمد", "Certified Designer's Office", arabicFont, emojiFont, icon: "🏢", isAlternate: true),
-
-                    ],
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      buildInfoBox( "جميع المراحل الخاصة بالمشروع موجودة في الصفحات اللاحقة.⬇️⬇️⬇️", "مراحل المشروع", "Project Stages", arabicFont, emojiFont, icon: "📋",),
-                      pw.SizedBox(width: 8),
-                    ],
-                  ),
-
-                ],
-              ),
-              pw.SizedBox(height: 20),
-            ],
-            pw.SizedBox(height: 15),
-          ],
-        ),
-      );
-    for (final stage in finishedStages) {
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          header: (context) => pw.Column(
-            children: [
-              pw.Container(
-                height: 5,
-                width: double.infinity,
-                decoration: pw.BoxDecoration(
-                  gradient: pw.LinearGradient(
-                    colors: [
-                      PdfColor.fromHex('#FFD700'),
-                      PdfColor.fromHex('#022C43'),
-                    ],
-                  ),
-                ),
-              ),
-              pw.SizedBox(height:5),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    ' ${DateFormat('dd/MM/yyyy').format(DateTime.now())}    🕓  ',
-                    style: pw.TextStyle(
-                      font: arabicFont,
-                      fontFallback: [emojiFont],
-                      fontSize: 11,
-                      color: PdfColors.grey700,
-                    ),
-                    textDirection: pw.TextDirection.rtl,
-                  ),
-                  pw.Image(logo, width: 80),
-                ],
-              ),
-            ],
-          ),
-          footer: (context) => pw.Container(
-            margin: const pw.EdgeInsets.only(top: 13),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-              children: [
-                pw.Divider(color: PdfColors.grey400),
-                pw.SizedBox(height:5),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            // ===== الصفحة الأولى (معلومات المشروع)
+            widgets.addAll([
+              pw.Center(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
                     pw.Text(
-                      "+966545388835    ☎",
+                      "التقرير العام للمشروع",
                       style: pw.TextStyle(
                         font: arabicFont,
                         fontFallback: [emojiFont],
-                        fontSize: 12,
-                        color: PdfColors.grey700,
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromHex('#022C43'),
                       ),
                       textDirection: pw.TextDirection.rtl,
                     ),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      crossAxisAlignment: pw.CrossAxisAlignment.center,
-                      children: [
-                        pw.Image(fbEmoji, width: 14, height: 14),
-                        pw.SizedBox(width: 4),
-                        pw.Image(googleEmoji, width: 14, height: 14),
-                        pw.SizedBox(width: 4),
-                        pw.Image(inEmoji, width: 14, height: 14),
-                        pw.SizedBox(width: 12),
-                        pw.Text(
-                          "BHB_Group",
-                          style: pw.TextStyle(
-                            font: arabicFont,
-                            fontFallback: [emojiFont],
-                            fontSize: 9,
-                            color: PdfColors.grey700,
-                          ),
+                    pw.SizedBox(height: 3),
+                    pw.Container(
+                      height: 4,
+                      width: 150,
+                      decoration: pw.BoxDecoration(
+                        gradient: pw.LinearGradient(
+                          colors: [
+                            PdfColor.fromHex('#FFD700'),
+                            PdfColor.fromHex('#022C43'),
+                          ],
                         ),
-                        pw.SizedBox(width: 12),
-                        pw.Text(
-                          "🌐 https://x.com/BHB_Group",
-                          style: pw.TextStyle(
-                            font: arabicFont,
-                            fontFallback: [emojiFont],
-                            fontSize: 10,
-                            color: PdfColors.blue700,
-                            decoration: pw.TextDecoration.underline,
-                          ),
-                        ),
-                        pw.SizedBox(width: 4),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          build: (_) => [
-            StageSectionBuilder(
-              stage: stage,
-              arabicFont: arabicFont,
-              emojiFont: emojiFont,
-              buildSubStages: () {
-                final stageId = stage['id'];
+              ),
+              pw.SizedBox(height: 10),
+              if (projectDetails != null) ...[
+                pw.SizedBox(height: 8),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    // Ligne 1 (bleu foncé)
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
 
-                final stageSubStages = allSubStages
-                    .where((s) => s.stageId == stageId)
-                    .toList();
-
-                if (stageSubStages.isEmpty) {
-                  return pw.Text(
-                    "لا توجد مراحل فرعية منتهية",
-                    style: pw.TextStyle(
-                      font: arabicFont,
-                      fontSize: 10,
-                      color: PdfColors.grey600,
+                        buildInfoBox(projectDetails?.ownerName ?? "-", "اسم المالك", "Owner's Name", arabicFont, emojiFont, icon: "👤",),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.projectName ?? "-", "اسم المشروع", "Project Name", arabicFont, emojiFont, icon: "📝",),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.district ?? "-", "البلدية", "Sub Municipality", arabicFont, emojiFont, icon: "📍"),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.municipality ?? "-", "المدينة", "Municipal", arabicFont, emojiFont, icon: "🧱"),
+                      ],
                     ),
-                    textDirection: pw.TextDirection.rtl,
-                  );
-                }
-                final stageSubStageIds =
-                stageSubStages.map((s) => s.id).whereType<String>().toSet();
+                    pw.SizedBox(height: 10),
+                    // Ligne 2
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.planNumber ?? "-", "رقم المخطط", "Plan Number", arabicFont, emojiFont, icon: "📌",isAlternate: true),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.plotNumber ?? "-", "رقم قطعة الارض", "Land Number", arabicFont, emojiFont, icon: "📄",isAlternate: true),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.licenseNumber ?? "-", "رقم رخصة البناء", "Building Permit Number", arabicFont, emojiFont, icon: "⚠",isAlternate: true),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.buildingDescription ?? "-", "وصف البناء", "Building Description", arabicFont, emojiFont, icon: "🏠", isAlternate: true),
+                      ],
+                    ),
+                    pw.SizedBox(height: 10),
+                    // Ligne 3 (bleu foncé)
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.reportDate?? "-", "تاريخ التقرير", "Report date", arabicFont, emojiFont, icon: "📅"),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.floorsCount ?? "-", "عدد الادوار", "Number Of Floors", arabicFont, emojiFont, icon: "🧮"),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.buildingType ?? "-", "نوع المبنى", "Building Type", arabicFont, emojiFont, icon: "🏭"),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.supervisorOffice ?? "-", "المكتب الهندسي المشرف", "Supervising engineering office", arabicFont, emojiFont, icon: "🏣"),
+                      ],
+                    ),
+                    pw.SizedBox(height: 10),
+                    // Ligne
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.phaseResult ?? "-", "نتيجة فحص المرحلة", "Check Result", arabicFont, emojiFont, icon: "✅", isAlternate: true),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.engineerName ?? "-", "اسم المهندس المشرف", "Name Of Supervising Engineer", arabicFont, emojiFont, icon: "👷 ", isAlternate: true),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.contractor?? "-", "مقاول البناء", "Construction Contractor", arabicFont, emojiFont, icon: "👨", isAlternate: true),
+                        pw.SizedBox(width: 4),
+                        buildInfoBox(projectDetails?.designerOffice ?? "-", "مكتب المصمم المعتمد", "Certified Designer's Office", arabicFont, emojiFont, icon: "🏢", isAlternate: true),
 
-                final stageTasks = allTasks.where((t) {
-                  final sid = t.subStageId?.trim();
-                  return sid != null && stageSubStageIds.contains(sid);
-                }).toList();
+                      ],
+                    ),
+                    pw.SizedBox(height: 10),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        buildInfoBox( "جميع المراحل لاختبارات الخاصة بالمشروع موجودة في الصفحات اللاحقة.⬇️⬇️⬇️", "مراحل لاختبارات المشروع", "Project Testing Phases", arabicFont, emojiFont, icon: "📋",),
+                        pw.SizedBox(width: 8),
+                      ],
+                    ),
 
-                return SubStagesSectionBuilder(
-                  subStages: stageSubStages,
-                  tasks: stageTasks,
-                  imagesBeforeMap: imagesBeforeMap,
-                  imagesAfterMap: imagesAfterMap,
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+              ],
+              pw.SizedBox(height: 40),
+
+            ]);
+
+            // ===== جميع المراحل + subStages + tasks
+            for (final stage in finishedStages) {
+              widgets.add(
+                StageSectionBuilder(
+                  stage: stage,
                   arabicFont: arabicFont,
                   emojiFont: emojiFont,
-                  imageDownloadUrlMap: imageDownloadUrlMap,
-                ).build();
-              },
-            ).build(),
-          ],
+                  buildSubStages: () {
+                    final stageId = stage['id'];
+
+                    final stageSubStages =
+                    allSubStages.where((s) => s.stageId == stageId).toList();
+
+                    if (stageSubStages.isEmpty) {
+                      return pw.Text(
+                        "لا توجد مراحل فرعية منتهية",
+                        style: pw.TextStyle(
+                          font: arabicFont,
+                          fontSize: 10,
+                          color: PdfColors.grey600,
+                        ),
+                        textDirection: pw.TextDirection.rtl,
+                      );
+                    }
+
+                    final stageSubStageIds =
+                    stageSubStages.map((s) => s.id).whereType<String>().toSet();
+
+                    final stageTasks = allTasks.where((t) {
+                      final sid = t.subStageId?.trim();
+                      return sid != null && stageSubStageIds.contains(sid);
+                    }).toList();
+                    return SubStagesSectionBuilder1(
+                      subStages: stageSubStages,
+                      tasks: stageTasks,
+                      imagesBeforeMap: imagesBeforeMap,
+                      imagesAfterMap: imagesAfterMap,
+                      arabicFont: arabicFont,
+                      emojiFont: emojiFont,
+                      imageDownloadUrlMap: imageDownloadUrlMap,
+                      projectId: projectId,
+                      stageId: stageId,
+                    ).build();
+                  },
+                ).build(),
+              );
+            }
+
+            return widgets;
+          },
 
         ),
       );
-    }
 
 
     final bytes = await pdf.save();

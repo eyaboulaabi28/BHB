@@ -133,17 +133,19 @@ class StagePdfGenerator {
     taskResult.fold((_) {}, (list) {
       tasksList = list as List<Tasks>;
     });
-    final filteredTasks = tasksList.where((t) {
-      final sid = t.subStageId?.trim();
-      return sid != null && validSubStageIds.contains(sid);
-    }).toList();
+
+    final filteredTasks = tasksList.where((t) =>
+    t.projectId == projectId &&
+        t.subStageId != null &&
+        validSubStageIds.contains(t.subStageId!.trim())
+    ).toList();
+
     for (final subStage in subStages) {
       debugPrint("Checking SubStage ID: '${subStage.id}'");
 
       final subTasks = tasksList.where((t) {
         final tId = (t.subStageId ?? '').trim();
         final sId = (subStage.id ?? '').trim();
-
         debugPrint("Task subStageId: '$tId' vs SubStageId: '$sId'");
         return tId.isNotEmpty && sId.isNotEmpty && tId == sId;
       }).toList();
@@ -161,6 +163,8 @@ class StagePdfGenerator {
       arabicFont: arabicFont,
       emojiFont: emojiFont,
       imageDownloadUrlMap: imageDownloadUrlMap,
+      projectId: projectId,
+      stageId: stage['id'],
 
     );
 
@@ -191,7 +195,13 @@ class StagePdfGenerator {
       allAfterUrls.addAll(t.imagesAfter ?? []);
     }
 
-    final allUrls = {...allBeforeUrls, ...allAfterUrls};
+    final projectTasks = tasksList.where((t) => t.projectId == projectId).toList();
+
+    final allUrls = <String>{};
+    for (final t in projectTasks) {
+      allUrls.addAll(t.imagesBefore ?? []);
+      allUrls.addAll(t.imagesAfter ?? []);
+    }
 
     for (final url in allUrls) {
       final httpsUrl = await _toHttpsDownloadUrl(url);
@@ -199,6 +209,7 @@ class StagePdfGenerator {
         imageDownloadUrlMap[url] = httpsUrl;
       }
     }
+
 
     debugPrint("🔗 imageDownloadUrlMap size = ${imageDownloadUrlMap.length}");
 

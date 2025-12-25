@@ -214,9 +214,10 @@ Future<void> initializeDependencies () async {
   // Tasks usecases
   sl.registerSingleton<AddTasksUseCase>(AddTasksUseCase(sl<TasksRepository>()));
   sl.registerSingleton<GetTaskUseCase>(GetTaskUseCase(sl<TasksRepository>()));
-  /*sl.registerLazySingleton<UpdateStageStatusUseCase>(
-          () => UpdateStageStatusUseCase(sl<StagesRepository>())
-  );*/
+  sl.registerSingleton<UpdateTaskUseCase>(UpdateTaskUseCase(sl<TasksRepository>()));
+  sl.registerSingleton<DeleteTaskUseCase>(DeleteTaskUseCase(sl<TasksRepository>()));
+
+
   // SubStages usecases
   sl.registerSingleton<AddSubStageUseCase>(AddSubStageUseCase(sl<SubStagesRepository>()));
   sl.registerSingleton<GetSubStageUseCase>(GetSubStageUseCase(sl<SubStagesRepository>()));

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -30,8 +31,23 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
-
+  String? selectedFloorId;
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _floorController = TextEditingController();
+
+  @override
+  void dispose() {
+    _floorController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+
+  bool get isCeilingStage {
+    return widget.subStage.stageId == 'phase_08'
+        || widget.subStage.stageId == 'phase_09'
+        || widget.subStage.stageId == 'phase_10';
+  }
 
   // Images Mobile
   List<File> _imagesBefore = [];
@@ -50,7 +66,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (result == null) {
       throw Exception("Compression failed (mobile)");
     }
-
     return result;
   }
 
@@ -67,7 +82,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Future<void> _pickImage(bool isBefore) async {
     await showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // autorise à dépasser la hauteur par défaut
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -210,8 +225,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final fileName = DateTime.now().millisecondsSinceEpoch.toString();
     final ref = FirebaseStorage.instance.ref().child('tasks/$fileName.jpg');
     final metadata = SettableMetadata(
-      contentType: 'image/jpeg', // 🔥 CRUCIAL
-      contentDisposition: 'inline', // 🔥 AFFICHAGE INLINE
+      contentType: 'image/jpeg',
+      contentDisposition: 'inline',
     );
     UploadTask uploadTask;
     if (bytes != null) {
@@ -229,7 +244,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   bool _isSubmitting = false;
 
   Future<void> _submit() async {
-    if (_isSubmitting) return; // 🔒 منع التكرار
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -239,8 +254,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
     final parentContext = Navigator.of(context).context;
     final notes = _notesController.text.trim();
-
-    // ✅ CLOSE MODAL FIRST
     Navigator.of(context).pop();
 
     CustomSnackBar.show(
@@ -274,6 +287,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         'imagesBefore': urlsBefore,
         'imagesAfter': urlsAfter,
         'createdAt': FieldValue.serverTimestamp(),
+        'floorId': selectedFloorId,
       });
 
       ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
@@ -295,7 +309,27 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         type: SnackBarType.error,
       );
     } finally {
-      _isSubmitting = false; // 🔓 فتح القفل
+      _isSubmitting = false;
+    }
+  }
+  String? _mapFloorLabelToId(String? label) {
+    switch (label) {
+      case 'الدور الأرضي':
+        return 'ground';
+      case 'الدور الأول':
+        return 'floor_1';
+      case 'الدور الثاني':
+        return 'floor_2';
+      case 'الدور الثالث':
+        return 'floor_3';
+      case 'الدور الرابع':
+        return 'floor_4';
+      case 'الدور الخامس':
+        return 'floor_5';
+      case 'السطح':
+        return 'roof';
+      default:
+        return null;
     }
   }
 
@@ -337,6 +371,48 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     right: const Icon(Icons.note_alt_outlined, color: Colors.grey),
                     maxLines: 3,
                   ),
+                  if (isCeilingStage) ...[
+                    const SizedBox(height: 20),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        "🧱 اختر الطابق",
+                        style: TextStyle(
+                          fontFamily: 'Tajawal',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: TColor.secondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    NewRoundSelectField(
+                      hintText: "اختر الطابق",
+                      controller: _floorController,
+                      options: const [
+                        'الدور الأرضي',
+                        'الدور الأول',
+                        'الدور الثاني',
+                        'الدور الثالث',
+                        'الدور الرابع',
+                        'الدور الخامس',
+                        'السطح',
+                      ],
+                      validator: (value) {
+                        if (isCeilingStage && (value == null || value.isEmpty)) {
+                          return 'الرجاء اختيار الطابق';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        // 🔥 UI فقط → ربط النص بالقيمة المنطقية
+                        setState(() {
+                          selectedFloorId = _mapFloorLabelToId(value);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 25),
+                  ],
                   const SizedBox(height: 25),
                   Text("📸 صور قبل العمل", style: TextStyle(color: TColor.secondary, fontSize: 16)),
                   const SizedBox(height: 10),

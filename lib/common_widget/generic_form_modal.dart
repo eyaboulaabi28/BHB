@@ -379,7 +379,8 @@ class FormFieldConfig {
   final int maxLines;
   final bool isImagePicker;
   final String? label;
-
+  final String? initialValue;
+  final ValueChanged<String?>? onChanged;
   FormFieldConfig({
     required this.key,
     required this.hint,
@@ -391,6 +392,8 @@ class FormFieldConfig {
     this.maxLines = 1,
     this.isImagePicker = false,
     this.label,
+    this.initialValue,
+    this.onChanged,
   });
 
   factory FormFieldConfig.imagePicker({required String key, String? label}) {

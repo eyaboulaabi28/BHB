@@ -33,7 +33,6 @@ class TestsSectionBuilder {
       children: tests.map((test) {
         final testTasks = tasks
             .where((t) => t.subTestId == test['id'])
-            .take(1)
             .toList();
         return _buildTestBox(test, testTasks);
       }).toList(),

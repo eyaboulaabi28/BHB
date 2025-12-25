@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } else {
       // 📱 Mobile → Mobile images
       return [
-        SplashScreenPage(imagePath: 'assets/img/mobile1.png',
+        SplashScreenPage(imagePath: 'assets/img/mobile11.png',
             englishText: '',
             arabicText: ''),
         SplashScreenPage(imagePath: 'assets/img/mobile2.png',

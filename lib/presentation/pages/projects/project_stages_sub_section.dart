@@ -114,7 +114,7 @@ class _ProjectStagesSubSectionStaticState extends State<ProjectStagesSubSectionS
                     onPressed: () {
                       final fakeSubStage = SubStage(
                         id: sub['id'],
-                        stageId: '',
+                        stageId: widget.stageId,
                         subStageName: sub['name'],
                         subStageStatus: "en cours",
                       );

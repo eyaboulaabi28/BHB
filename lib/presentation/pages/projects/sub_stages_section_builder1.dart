@@ -5,7 +5,7 @@ import 'package:app_bhb/data/auth/models/sub_stages_model.dart';
 import 'package:app_bhb/data/auth/models/tasks_model.dart';
 
 
-class SubStagesSectionBuilder {
+class SubStagesSectionBuilder1 {
   final List<SubStage> subStages;
   final List<Tasks> tasks;
   final Map<String, List<Uint8List>> imagesBeforeMap;
@@ -16,7 +16,7 @@ class SubStagesSectionBuilder {
   final String projectId;
   final String stageId;
 
-  SubStagesSectionBuilder({
+  SubStagesSectionBuilder1({
     required this.subStages,
     required this.tasks,
     required this.imagesBeforeMap,
@@ -38,12 +38,12 @@ class SubStagesSectionBuilder {
     final Map<String, List<Tasks>> result = {};
     for (final task in tasks) {
       final floor = task.floorId ?? 'غير محدد';
-      if (!result.containsKey(floor)) {
-        result[floor] = [task];
-      }
+      result.putIfAbsent(floor, () => []);
+      result[floor]!.add(task); // ✅ AJOUT CORRECT
     }
     return result;
   }
+
 
   String _floorLabel(String floorId) {
     // ✅ Si la phase n’est pas dans celles avec étages, ne rien afficher
@@ -332,7 +332,7 @@ class SubStagesSectionBuilder {
                 : imageWidget,
             if (inlineUrl != null) ...[
               pw.SizedBox(height: 2),
-             /* pw.UrlLink(
+              /* pw.UrlLink(
                 destination: inlineUrl,
                 child: pw.Text(
                   'عرض',
@@ -413,7 +413,7 @@ class SubStagesSectionBuilder {
           pw.SizedBox(height: 3),
 
           // 📝 Notes (titre + contenu sur la même ligne)
-            // 📝 Notes (titre + contenu sur la même ligne)
+          // 📝 Notes (titre + contenu sur la même ligne)
           if (task.notes != null && task.notes!.isNotEmpty) ...[
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,

@@ -21,4 +21,14 @@ class TasksRepositoryImpl extends TasksRepository {
         .getTasksBySubStage(subStageId,projectId);
   }
 
+  @override
+  Future<Either<String, Unit>> deleteTask(String taskId) async{
+    return await sl<TasksFirebaseService>().deleteTask(taskId);
+  }
+
+  @override
+  Future<Either<String, Unit>> updateTask(Tasks task) async {
+    return await sl<TasksFirebaseService>().updateTask(task);
+  }
+
 }

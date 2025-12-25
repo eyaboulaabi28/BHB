@@ -6,8 +6,8 @@ abstract class TasksFirebaseService {
   Future<Either<String, Unit>> addTask(Tasks task);
   Future<Either> getAllTask();
   Future<Either<String, List<Tasks>>> getTasksBySubStage(String subStageId,String projectId);
-
-
+  Future<Either<String, Unit>> deleteTask(String taskId);
+  Future<Either<String, Unit>> updateTask(Tasks task);
 }
 class TasksFirebaseServiceImpl extends TasksFirebaseService {
 
@@ -59,5 +59,26 @@ class TasksFirebaseServiceImpl extends TasksFirebaseService {
       return Left(e.toString());
     }
   }
+  Future<Either<String, Unit>> deleteTask(String taskId) async {
+    try {
+      await _tasksCollection.doc(taskId).delete();
+      return right(unit);
+    } on FirebaseException catch (e) {
+      return left("Erreur Firebase : ${e.message}");
+    } catch (e) {
+      return left("Erreur inattendue : $e");
+    }
+  }
+  Future<Either<String, Unit>> updateTask(Tasks task) async {
+    try {
+      if (task.id == null) return left("ID de la tâche manquant");
+      await _tasksCollection.doc(task.id).update(task.toMap());
+      return right(unit);
+    } catch (e) {
+      return left("Erreur lors de la mise à jour : $e");
+    }
+  }
+
+
 }
 

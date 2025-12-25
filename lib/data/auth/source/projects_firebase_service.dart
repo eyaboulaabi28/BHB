@@ -94,13 +94,32 @@ class ProjectsFirebaseServiceImpl extends ProjectsFirebaseService {
 
   @override
   Future<Either> deleteProject(String id) async {
+    final tasksCollection = FirebaseFirestore.instance.collection('tasks');
     try {
-      await _projectsCollection.doc(id).delete();
-      return const Right('Project deleted successfully');
+      // 1️⃣ Supprimer toutes les tasks liées au project
+      final querySnapshot = await tasksCollection
+          .where('projectId', isEqualTo: id)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (var doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 2️⃣ Supprimer le project lui-même
+      final projectDoc = _projectsCollection.doc(id);
+      batch.delete(projectDoc);
+
+      // 3️⃣ Commit du batch
+      await batch.commit();
+
+      return const Right('Project and its tasks deleted successfully');
     } catch (e) {
       return Left(e.toString());
     }
   }
+
 
   @override
   Future<Either> getProjectById(String id) async {

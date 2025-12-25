@@ -45,3 +45,25 @@ class GetTasksBySubStageParams {
     required this.projectId,
   });
 }
+class UpdateTaskUseCase implements UseCase<Either<String, Unit>, Tasks> {
+  final TasksRepository repository;
+
+  UpdateTaskUseCase(this.repository);
+
+  @override
+  Future<Either<String, Unit>> call({Tasks? params}) async {
+    if (params == null) return left("Paramètres manquants pour la mise à jour");
+    return await repository.updateTask(params);
+  }
+}
+class DeleteTaskUseCase implements UseCase<Either<String, Unit>, String> {
+  final TasksRepository repository;
+
+  DeleteTaskUseCase(this.repository);
+
+  @override
+  Future<Either<String, Unit>> call({String? params}) async {
+    if (params == null || params.isEmpty) return left("ID de la tâche requis pour suppression");
+    return await repository.deleteTask(params);
+  }
+}
