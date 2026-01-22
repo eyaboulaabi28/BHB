@@ -1,35 +1,38 @@
 class Materials {
   String? id;
   String? projectId;
-  String? name;
+  String? stage;
   String? unit;
-  String? image;
+  String? description;
+  String? engineerId;
 
   Materials({
     this.id,
     this.projectId,
-    this.name,
+    this.stage,
     this.unit,
-    this.image,
-
+    this.description,
+    this.engineerId,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'name': name,
+      'projectId': projectId,
+      'stage': stage,
       'unit': unit,
-      'image': image,
-      'projectId':projectId,
+      'description': description,
+      'engineerId': engineerId,
     };
   }
 
   factory Materials.fromMap(String id, Map<String, dynamic> map) {
     return Materials(
       id: id,
-      name: map['name'],
+      projectId: map['projectId'],
+      stage: map['stage'],
       unit: map['unit'],
-      image: map['image'],
-      projectId:map['projectId'],
+      description: map['description'],
+      engineerId: map['engineerId'],
     );
   }
 }

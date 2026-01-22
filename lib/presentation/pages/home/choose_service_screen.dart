@@ -132,7 +132,7 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => HomeScreen(selectedType: selectedType),
+                    builder: (_) => HomeScreen(selectedType: selectedType,projectName:"",),
                   ),
                       (route) => false,
                 );

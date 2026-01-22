@@ -53,9 +53,9 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
           _requestMaterials.addAll(
             (materialsList as List<Materials>).map((m) => {
               'projectId': m.projectId,
-              'name': m.name,
+              'stage': m.stage,
               'unit': m.unit,
-              'image': m.image,
+              'description': m.description,
             }),
           );
         });

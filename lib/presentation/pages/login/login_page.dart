@@ -364,12 +364,11 @@ class _LoginPageState extends State<LoginPage> {
                               icon: FontAwesomeIcons.whatsapp,
                               color: Colors.green,
                               label: "واتساب",
-                              url: "https://wa.me/+966 56 095 2288",
+                              url: "https://wa.me/966560952288",
                               size: 20,
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 15),
                       ],
                     ),

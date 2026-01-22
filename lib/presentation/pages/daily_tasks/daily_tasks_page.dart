@@ -16,8 +16,10 @@ import '../../../service_locator.dart';
 
 class DailyTasksPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const DailyTasksPage({super.key, required this.selectedType});
+  const DailyTasksPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<DailyTasksPage> createState() => _DailyTasksPageState();
@@ -312,6 +314,7 @@ class _DailyTasksPageState extends State<DailyTasksPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),

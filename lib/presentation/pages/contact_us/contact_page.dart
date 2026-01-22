@@ -9,8 +9,10 @@ import 'package:flutter/material.dart';
 
 class ContactPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const ContactPage({super.key, required this.selectedType});
+  const ContactPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<ContactPage> createState() => _ContactPageState();
@@ -119,7 +121,7 @@ class _ContactPageState extends State<ContactPage> {
                                 icon: FontAwesomeIcons.whatsapp,
                                 color: Colors.green,
                                 label: "واتساب",
-                                url: "https://wa.me/+966 56 095 2288",
+                                url: "https://wa.me/966560952288",
                                 size: 48,
                               ),
                             ),
@@ -184,7 +186,7 @@ class _ContactPageState extends State<ContactPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
-
+           projectName: widget.projectName,
         ),
       ),
     );

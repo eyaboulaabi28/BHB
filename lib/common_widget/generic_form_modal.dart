@@ -96,33 +96,42 @@ class _GenericFormModalState extends State<GenericFormModal> {
 
 
   Future<void> _pickFile() async {
-    // Ouvre le file picker pour tous types de fichiers
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-      withData: kIsWeb, // si Web, récupère directement bytes
-    );
+    try {
+      debugPrint("🔔 _pickFile called");
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        withData: kIsWeb,
+      );
 
-    if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) {
+        debugPrint("⚠️ Aucun fichier sélectionné");
+        return;
+      }
 
-    final file = result.files.first;
+      final file = result.files.first;
+      debugPrint("✅ Fichier sélectionné: ${file.name}");
 
-    if (kIsWeb) {
       setState(() {
-        _selectedImageBytes = file.bytes;
-        _fileName = file.name;
-        _fileType = file.extension ?? "unknown";
-        _selectedImage = null; // pour éviter conflit
+        if (kIsWeb) {
+          _selectedImageBytes = file.bytes;
+          _fileName = file.name;
+          _fileType = file.extension ?? "unknown";
+          _selectedImage = null;
+        } else {
+          _selectedImage = File(file.path!);
+          _fileName = file.name;
+          _fileType = file.extension ?? "unknown";
+          _selectedImageBytes = null;
+        }
       });
-    } else {
-      setState(() {
-        _selectedImage = File(file.path!);
-        _fileName = file.name;
-        _fileType = file.extension ?? "unknown";
-        _selectedImageBytes = null;
-      });
+    } catch (e) {
+      debugPrint("⚠️ Erreur lors de la sélection de fichier: $e");
+      // Optionnel: afficher un SnackBar à l'utilisateur
     }
   }
+
+
 // Upload pour le Web (Uint8List)
   Future<String?> uploadToFirebaseWeb(Uint8List imageBytes, String fileName) async {
     try {
@@ -176,8 +185,8 @@ class _GenericFormModalState extends State<GenericFormModal> {
                   ),
                   const SizedBox(height: 20),
                   if (widget.topWidget != null) widget.topWidget!,
-
                   const SizedBox(height: 20),
+
                   if (widget.includeImagePicker) ...[
                     GestureDetector(
                       onTap: _pickFile,
@@ -188,8 +197,6 @@ class _GenericFormModalState extends State<GenericFormModal> {
                           border: Border.all(color: Colors.grey.shade300, width: 2),
                           borderRadius: BorderRadius.circular(20),
                           color: Colors.grey.shade100,
-
-                          // ✅ Image uniquement si c’est une image
                           image: _isImage(_fileType)
                               ? (_selectedImage != null
                               ? DecorationImage(
@@ -211,8 +218,6 @@ class _GenericFormModalState extends State<GenericFormModal> {
                               : null)))
                               : null,
                         ),
-
-                        // 🔴 🔴 🔴 ICI EXACTEMENT
                         child: _isImage(_fileType)
                             ? null
                             : Center(
@@ -226,14 +231,16 @@ class _GenericFormModalState extends State<GenericFormModal> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 20),
                   ],
 
+                  // ==== Champs du formulaire ====
                   ...widget.fields.map((field) {
                     // Si un extraFieldBuilder existe pour ce champ, on l'utilise
-                    if (widget.extraFieldBuilders != null && widget.extraFieldBuilders![field.key] != null) {
-                      return widget.extraFieldBuilders![field.key]!(field, _controllers[field.key]!);
+                    if (widget.extraFieldBuilders != null &&
+                        widget.extraFieldBuilders![field.key] != null) {
+                      return widget.extraFieldBuilders![field.key]!(
+                          field, _controllers[field.key]!);
                     }
 
                     return Padding(
@@ -247,10 +254,33 @@ class _GenericFormModalState extends State<GenericFormModal> {
                         rightIcon: field.icon,
                         readOnly: widget.readOnly,
                       )
+                          : field.isParagraph
+                          ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 15),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          _controllers[field.key]?.text ?? '',
+                          style: const TextStyle(
+                            fontFamily: 'Tajawal',
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.right,
+                          softWrap: true,
+                        ),
+
+                      )
                           : NewRoundTextField(
                         hintText: field.hint,
                         controller: _controllers[field.key],
-                        readOnly: widget.readOnly,
+                        maxLines:
+                        widget.readOnly ? null : field.maxLines,
+                        minLines: widget.readOnly ? 1 : field.minLines,
                         keyboardType: field.keyboardType,
                         obscureText: _obscureMap[field.key] ?? false,
                         right: field.isPassword
@@ -263,7 +293,8 @@ class _GenericFormModalState extends State<GenericFormModal> {
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureMap[field.key] = !_obscureMap[field.key]!;
+                              _obscureMap[field.key] =
+                              !_obscureMap[field.key]!;
                             });
                           },
                         )
@@ -272,7 +303,8 @@ class _GenericFormModalState extends State<GenericFormModal> {
                       ),
                     );
                   }).toList(),
-                 const SizedBox(height: 10),
+
+                  const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: SafeArea(
@@ -327,15 +359,15 @@ class _GenericFormModalState extends State<GenericFormModal> {
                                       for (var e in _controllers.entries) e.key: e.value.text,
                                     };
 
-                                    // ✅ أضف هذا الجزء
+                                    // Ajout des fichiers
+                                    if (_selectedImageBytes != null) {
+                                      values["imageBytes"] = _selectedImageBytes;
+                                    }
+                                    if (_selectedImage != null) {
+                                      values["imagePath"] = _selectedImage!.path;
+                                    }
                                     values["fileName"] = _fileName;
                                     values["fileType"] = _fileType;
-
-                                    if (kIsWeb) {
-                                      values["imageBytes"] = _selectedImageBytes;
-                                    } else {
-                                      values["imagePath"] = _selectedImage?.path;
-                                    }
 
                                     widget.onSubmit(values);
                                   }
@@ -357,7 +389,6 @@ class _GenericFormModalState extends State<GenericFormModal> {
                       ),
                     ),
                   )
-
                 ],
               ),
             ),
@@ -366,6 +397,7 @@ class _GenericFormModalState extends State<GenericFormModal> {
       ),
     );
   }
+
 }
 
 class FormFieldConfig {
@@ -376,11 +408,13 @@ class FormFieldConfig {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final List<String>? options;
-  final int maxLines;
+  final int? maxLines;
+  final int minLines;
   final bool isImagePicker;
   final String? label;
   final String? initialValue;
   final ValueChanged<String?>? onChanged;
+  final bool isParagraph;
   FormFieldConfig({
     required this.key,
     required this.hint,
@@ -394,6 +428,8 @@ class FormFieldConfig {
     this.label,
     this.initialValue,
     this.onChanged,
+    this.minLines=0,
+    this.isParagraph = false,
   });
 
   factory FormFieldConfig.imagePicker({required String key, String? label}) {

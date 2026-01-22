@@ -20,12 +20,14 @@ class AddCustomerModal extends StatefulWidget {
 
   final String title;
   final String submitButtonText;
+  final BuildContext parentContext;
 
   const AddCustomerModal({
     super.key,
     required this.onAdd,
     this.title = "إضافة عميل جديد",
     this.submitButtonText = "إضافة",
+    required this.parentContext,
   });
 
   @override
@@ -187,7 +189,7 @@ class _AddCustomerModalState extends State<AddCustomerModal> {
         final email = values["email"].trim();
 
         try {
-
+          // Créer le client à ajouter
           final customer = Customers(
             firstName: values["name"].trim(),
             email: email,
@@ -198,33 +200,27 @@ class _AddCustomerModalState extends State<AddCustomerModal> {
             longitude: selectedLng,
           );
 
+          // Appel du use case pour ajouter le client
           final addCustomerUseCase = sl<AddCustomerUseCase>();
           final result = await addCustomerUseCase.call(params: customer);
 
           result.fold(
                 (failure) {
-              CustomSnackBar.show(
-                context,
-                message:
-                "حدث خطأ أثناء إضافة العميل. الرجاء المحاولة مرة أخرى.",
-                type: SnackBarType.error,
-              );
+              // En cas d'erreur, afficher le SnackBar **après la fermeture du modal**
+              Navigator.pop(context);
+              Future.delayed(const Duration(milliseconds: 200), () {
+                CustomSnackBar.show(
+                  widget.parentContext,
+                  message:  failure.toString(),
+                  type: SnackBarType.error,
+                );
+              });
             },
                 (success) async {
-              CustomSnackBar.show(
-                context,
-                message: "تمت إضافة العميل بنجاح.",
-                type: SnackBarType.success,
-              );
+              // Fermeture du modal
+              Navigator.pop(context);
 
-              await _sendNotification(
-                title: "عميل جديد",
-                message:
-                "تم إضافة عميل جديد: ${values["name"].trim()}",
-                route: "/home",
-                userId: success,
-              );
-
+              // Ajouter le client à la liste dans la page parent
               widget.onAdd({
                 "id": success,
                 "name": values["name"].trim(),
@@ -235,17 +231,37 @@ class _AddCustomerModalState extends State<AddCustomerModal> {
                 "longitude": selectedLng,
               });
 
-              Navigator.pop(context);
+              // Afficher le SnackBar **après un petit délai**
+              Future.delayed(const Duration(milliseconds: 200), () {
+                CustomSnackBar.show(
+                  widget.parentContext,
+                  message: "تمت إضافة العميل بنجاح.",
+                  type: SnackBarType.success,
+                );
+              });
+
+              // Envoyer la notification
+              await _sendNotification(
+                title: "عميل جديد",
+                message: "تم إضافة عميل جديد: ${values["name"].trim()}",
+                route: "/home",
+                userId: success,
+              );
             },
           );
         } catch (e) {
-          CustomSnackBar.show(
-            context,
-            message: "حدث خطأ غير متوقع: ${e.toString()}",
-            type: SnackBarType.error,
-          );
+          // En cas d'exception, fermer le modal et afficher le SnackBar
+          Navigator.pop(context);
+          Future.delayed(const Duration(milliseconds: 200), () {
+            CustomSnackBar.show(
+              widget.parentContext,
+              message: "حدث خطأ غير متوقع: ${e.toString()}",
+              type: SnackBarType.error,
+            );
+          });
         }
       },
+
     );
   }
 }

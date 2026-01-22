@@ -15,8 +15,10 @@ import '../../../service_locator.dart';
 
 class VacationPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const VacationPage({super.key, required this.selectedType});
+  const VacationPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<VacationPage> createState() => _VacationPageState();
@@ -257,7 +259,7 @@ class _VacationPageState extends State<VacationPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
-
+          projectName: widget.projectName,
         ),
       ),
     );

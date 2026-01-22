@@ -179,6 +179,7 @@ class OperationalTestPdfGenerator {
       imageDownloadUrlMap: imageDownloadUrlMap,
       arabicFont: arabicFont,
       emojiFont: emojiFont,
+      projectId: projectId,
     );
     /// 5️⃣ PDF
     final pdf = pw.Document();
@@ -333,6 +334,28 @@ class OperationalTestPdfGenerator {
             ),
             pw.SizedBox(height: 40),
             testsSection.build(),
+            pw.SizedBox(height: 20), // un petit espace avant le paragraphe
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#FDE2E2'), // fond rouge clair pour avertissement
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                border: pw.Border.all(color: PdfColor.fromHex('#D32F2F'), width: 1), // bordure rouge foncé
+              ),
+              child: pw.Text(
+                "  يُعتبر هذا التقرير نهائيًا ومعتمدًا تلقائيًا بعد مرور 48 ساعة من تاريخ إرساله، ما لم يُقدَّم اعتراض خطي ومعتمد خلال هذه الفترة. ",
+                style: pw.TextStyle(
+                  font: arabicFont,
+                  fontFallback: [emojiFont],
+                  fontSize: 8,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('#B71C1C'), // texte rouge foncé
+                ),
+                textAlign: pw.TextAlign.center,
+                textDirection: pw.TextDirection.rtl,
+              ),
+            ),
 
           ],
         ],

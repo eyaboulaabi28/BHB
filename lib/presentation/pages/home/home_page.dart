@@ -16,9 +16,11 @@ import '../../../service_locator.dart';
 class HomeScreen extends StatefulWidget {
 
   final String selectedType;
+  final String projectName;
 
 
-  const HomeScreen({super.key, required this.selectedType });
+  const HomeScreen({super.key, required this.selectedType ,    required this.projectName
+  });
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -338,6 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     HomeMenuSection(
                       selectedType: selectedType,
                       userRole: userRole.trim().toLowerCase(),
+                      projectName: widget.projectName,
                     ),
 
                     const SizedBox(height: 20),
@@ -373,6 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: selectedType,
+          projectName: widget.projectName,
         ),
       ),
     );

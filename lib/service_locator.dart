@@ -193,6 +193,9 @@ Future<void> initializeDependencies () async {
   sl.registerSingleton<GetProjectUseCase>(GetProjectUseCase(sl<ProjectsRepository>()),);
   sl.registerSingleton<DeleteProjectUseCase>(DeleteProjectUseCase(sl<ProjectsRepository>()),);
   sl.registerSingleton<GetProjectByIdUseCase>(GetProjectByIdUseCase(sl<ProjectsRepository>()),);
+  sl.registerSingleton<UpdateProjectUseCase>(UpdateProjectUseCase(sl<ProjectsRepository>()),);
+
+
   // 🔹 NOUVEAUX USE CASES
   sl.registerSingleton<UpdateSubStageStatusUseCase>(
     UpdateSubStageStatusUseCase(sl<ProjectsRepository>()),
@@ -304,6 +307,7 @@ Future<void> initializeDependencies () async {
   sl.registerSingleton<CreateNotificationUseCase>(CreateNotificationUseCase());
   sl.registerSingleton<GetNotificationUseCase>(GetNotificationUseCase());
   sl.registerSingleton<MarkNotificationAsReadUseCase>(MarkNotificationAsReadUseCase());
+  sl.registerSingleton<GetUnreadNotificationCountUseCase>(GetUnreadNotificationCountUseCase());
   //UseCases Settings
   sl.registerSingleton<AddSettingsUseCase>(AddSettingsUseCase());
   sl.registerSingleton<GetSettingsUseCase>(GetSettingsUseCase());

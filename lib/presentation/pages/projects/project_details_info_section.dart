@@ -5,6 +5,7 @@ import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
 
 import '../../../service_locator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProjectDetailsInfoSection extends StatelessWidget {
   final Project project;
@@ -52,6 +53,18 @@ class ProjectDetailsInfoSection extends StatelessWidget {
     );
   }
 
+  Future<void> _openProjectLocation() async {
+    if (project.latitude == null || project.longitude == null) return;
+
+    final url = Uri.parse(
+      "https://www.google.com/maps/search/?api=1&query=${project.latitude},${project.longitude}",
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Future<String?> _getUserRole() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return null;
@@ -62,6 +75,59 @@ class ProjectDetailsInfoSection extends StatelessWidget {
           (data) => role = data['role'] as String?,
     );
     return role;
+  }
+  Widget _actionsMenu(BuildContext context, bool isCustomer) {
+    if (isCustomer) return const SizedBox();
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert),
+      onSelected: (value) {
+        switch (value) {
+          case 'location':
+            _openProjectLocation();
+            break;
+          case 'message':
+            onMessage();
+            break;
+          case 'call':
+            onCall();
+            break;
+          case 'edit':
+            onEdit();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'location',
+          child: ListTile(
+            leading: Icon(Icons.location_on, color: Colors.red),
+            title: Text("عرض موقع المشروع"),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'message',
+          child: ListTile(
+            leading: Icon(Icons.message, color: Colors.blue),
+            title: Text("إرسال رسالة"),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'call',
+          child: ListTile(
+            leading: Icon(Icons.call, color: Colors.green),
+            title: Text("اتصال"),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'edit',
+          child: ListTile(
+            leading: Icon(Icons.edit, color: Colors.orange),
+            title: Text("تعديل المشروع"),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -104,28 +170,7 @@ class ProjectDetailsInfoSection extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Row(
-                        children: [
-                          if (!isCustomer)
-                          IconButton(
-                            icon: const Icon(Icons.message, color: Colors.blue),
-                            onPressed: onMessage,
-                            tooltip: "إرسال رسالة",
-                          ),
-                          if (!isCustomer)
-                          IconButton(
-                            icon: const Icon(Icons.call, color: Colors.green),
-                            onPressed: onCall,
-                            tooltip: "إجراء مكالمة",
-                          ),
-                          if (!isCustomer) // n’affiche que si ce n’est pas un customer
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.orange),
-                              onPressed: onEdit,
-                              tooltip: "تعديل المشروع",
-                            ),
-                        ],
-                      ),
+                      _actionsMenu(context, isCustomer),
                     ],
                   ),
                   const SizedBox(height: 15),

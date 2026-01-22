@@ -13,7 +13,7 @@ class Meeting {
   String? uidEmployee;
   String? nameEngineer;
   String? uidEngineer;
-  String? imageUrl;
+  List<String>? imageUrls;
   String? signatureUrl;
   String? customerPhone;
 
@@ -31,7 +31,7 @@ class Meeting {
     this.uidEmployee,
     this.nameEngineer,
     this.uidEngineer,
-    this.imageUrl,
+    this.imageUrls,
     this.signatureUrl,
     this.customerPhone,
   }) : dateMeeting = dateMeeting ?? DateTime.now();
@@ -49,7 +49,7 @@ class Meeting {
       'uidEmployee': uidEmployee,
       'nameEngineer': nameEngineer,
       'uidEngineer': uidEngineer,
-      'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
       'signatureUrl': signatureUrl,
       'customerPhone': customerPhone,
 
@@ -73,9 +73,12 @@ class Meeting {
       uidEmployee: map['uidEmployee'],
       nameEngineer: map['nameEngineer'],
       uidEngineer: map['uidEngineer'],
-      imageUrl: map['imageUrl'],
+      imageUrls: map['imageUrls'] != null
+          ? List<String>.from(map['imageUrls'])
+          : null,
       signatureUrl: map['signatureUrl'],
       customerPhone: map['customerPhone'],
     );
   }
+
 }

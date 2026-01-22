@@ -11,8 +11,9 @@ import '../../../service_locator.dart';
 
 class NotificationsPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const NotificationsPage({super.key, required this.selectedType});
+  const NotificationsPage({super.key, required this.selectedType, required this.projectName});
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
@@ -25,6 +26,32 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void initState() {
     super.initState();
     _loadNotifications();
+  }
+  String formatDateToArabic(DateTime date) {
+    // Chiffres occidentaux → chiffres arabes
+    const westernDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+
+    String convertToArabicNumbers(String input) {
+      for (int i = 0; i < westernDigits.length; i++) {
+        input = input.replaceAll(westernDigits[i], arabicDigits[i]);
+      }
+      return input;
+    }
+
+    // Obtenir les parties de la date
+    int hour = date.hour;
+    String period = hour >= 12 ? 'م' : 'ص'; // AM/PM arabe
+    hour = hour % 12;
+    if (hour == 0) hour = 12;
+
+    String day = convertToArabicNumbers(date.day.toString().padLeft(2, '0'));
+    String month = convertToArabicNumbers(date.month.toString().padLeft(2, '0'));
+    String year = convertToArabicNumbers(date.year.toString());
+    String hourStr = convertToArabicNumbers(hour.toString().padLeft(2, '0'));
+    String minute = convertToArabicNumbers(date.minute.toString().padLeft(2, '0'));
+
+    return '$day/$month/$year $hourStr:$minute $period';
   }
 
   void _loadNotifications() async {
@@ -110,90 +137,91 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 itemCount: notification.length,
                 itemBuilder: (context, index) {
                   final notif = notification[index];
-                  return InkWell(
-                    onTap: () async {
-                      // 1️⃣ Mise à jour locale
-                      setState(() {
-                        notif.isRead = true;
-                      });
-
-                      // 2️⃣ Mise à jour dans Firebase
-                      if (notif.id != null) {
-                        await sl<MarkNotificationAsReadUseCase>().call(notif.id!);
-                      }
-
-                      // 3️⃣ Navigation vers la route si existe
-                      if (notif.route != null) {
-                        Navigator.pushNamed(context, notif.route!);
-                      } else {
-                        CustomSnackBar.show(
-                          context,
-                          message: "لا توجد صفحة مرتبطة بهذه الإشعار",
-                          type: SnackBarType.info,
-                        );
-                      }
-                    },
-
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 3,
-                      color: notif.isRead ? Colors.grey[200] : Colors.white, // <-- couleur différente
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 25,
-                              backgroundColor: notif.isRead
-                                  ? Colors.grey[300]
-                                  : TColor.secondary.withOpacity(0.2),
-                              child: Icon(Icons.notifications,
-                                  color: notif.isRead ? Colors.grey : TColor.primary),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    notif.title,
-                                    style: TextStyle(
-                                      fontFamily: 'Tajawal',
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: notif.isRead ? Colors.grey : Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    notif.message,
-                                    style: TextStyle(
-                                      fontFamily: 'Tajawal',
-                                      fontSize: 14,
-                                      color: notif.isRead ? Colors.grey : Colors.grey[700],
-                                    ),
-                                  ),
-                                ],
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), // <-- padding sur les côtés
+                    child: InkWell(
+                      onTap: () async {
+                        setState(() {
+                          notif.isRead = true;
+                        });
+                        if (notif.id != null) {
+                          await sl<MarkNotificationAsReadUseCase>().call(notif.id!);
+                        }
+                        if (notif.route != null) {
+                          Navigator.pushNamed(context, notif.route!);
+                        } else {
+                          CustomSnackBar.show(
+                            context,
+                            message: "لا توجد صفحة مرتبطة بهذه الإشعار",
+                            type: SnackBarType.info,
+                          );
+                        }
+                      },
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 3,
+                        color: notif.isRead ? Colors.grey[200] : Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12), // <-- un peu moins grand
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20, // <-- réduire taille
+                                backgroundColor: notif.isRead
+                                    ? Colors.grey[300]
+                                    : TColor.secondary.withOpacity(0.2),
+                                child: Icon(
+                                  Icons.notifications,
+                                  color: notif.isRead ? Colors.grey : TColor.primary,
+                                  size: 20, // <-- réduire icône
+                                ),
                               ),
-                            ),
-                            Text(
-                              notif.createdAt.toString().substring(0, 16),
-                              style: const TextStyle(
-                                fontFamily: 'Tajawal',
-                                fontSize: 12,
-                                color: Colors.grey,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notif.title,
+                                      style: TextStyle(
+                                        fontFamily: 'Tajawal',
+                                        fontSize: 16, // <-- légèrement plus petit
+                                        fontWeight: FontWeight.bold,
+                                        color: notif.isRead ? Colors.grey : Colors.black,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      notif.message,
+                                      style: TextStyle(
+                                        fontFamily: 'Tajawal',
+                                        fontSize: 13, // <-- légèrement plus petit
+                                        color: notif.isRead ? Colors.grey : Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                              Text(
+                                formatDateToArabic(notif.createdAt),
+                                style: const TextStyle(
+                                  fontFamily: 'Tajawal',
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   );
                 },
-              ),
+              )
+
             ),
           ],
         ),
@@ -217,6 +245,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),

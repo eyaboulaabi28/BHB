@@ -20,9 +20,11 @@ import '../../../service_locator.dart';
 
 class ProjectsDetailsPage extends StatefulWidget {
   final String projectId;
+  final String projectName;
+
   final String selectedType;
 
-  const ProjectsDetailsPage({super.key, required this.projectId,required this.selectedType});
+  const ProjectsDetailsPage({super.key, required this.projectId,required this.selectedType,required this.projectName});
 
   @override
   State<ProjectsDetailsPage> createState() => _ProjectsDetailsPageState();
@@ -85,15 +87,18 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       return;
     }
 
-    // Nettoyage du numéro
-    final cleanedPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final cleanedPhone = normalizePhone(phone);
 
-    // L’URL officielle de WhatsApp
-    final uri = Uri.parse("https://wa.me/$cleanedPhone");
+    final uri = Uri.parse(
+      "https://wa.me/$cleanedPhone?text=${Uri.encodeComponent("السلام عليكم")}",
+    );
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
       CustomSnackBar.show(
         context,
         message: "تعذّر فتح واتساب",
@@ -101,6 +106,8 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       );
     }
   }
+
+
 
 
   void _makeWhatsappCall() async {
@@ -115,13 +122,16 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       return;
     }
 
-    final cleanedPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final cleanedPhone = normalizePhone(phone);
 
     final uri = Uri.parse("https://wa.me/$cleanedPhone");
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
       CustomSnackBar.show(
         context,
         message: "تعذّر فتح واتساب",
@@ -131,8 +141,22 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
   }
 
 
+  String normalizePhone(String phone) {
+    var cleaned = phone.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cleaned.startsWith('0')) {
+      cleaned = '966${cleaned.substring(1)}'; // 🇸🇦 السعودية
+    }
+
+    return cleaned;
+  }
+
+
+
   void _editProject() {
     if (_project == null) return;
+
+    final rootContext = context; // ✅ Context الصفحة
 
     showModalBottomSheet(
       context: context,
@@ -141,21 +165,38 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       builder: (context) {
         return EditProjectModal(
           project: _project!,
-          onSubmit: (updatedProject) {
-            setState(() {
-              _project = updatedProject;
-            });
-            CustomSnackBar.show(context, message: "تم تحديث المشروع بنجاح", type: SnackBarType.success);
-             _notificationService.send(
-              title: "تعديل المشروع",
-              message: "تم تعديل بيانات المشروع: ${updatedProject.projectName}",
-              route: "/home",
+          onSubmit: (updatedProject) async {
+            final result = await sl<UpdateProjectUseCase>()
+                .call(params: updatedProject);
+
+            if (!mounted) return ;
+
+            return result.fold(
+                  (error) {
+                CustomSnackBar.show(
+                  rootContext, // ✅ مهم جدًا
+                  message: "فشل تحديث المشروع: $error",
+                  type: SnackBarType.error,
+                );
+                return false;
+              },
+                  (_) {
+                setState(() => _project = updatedProject);
+
+                CustomSnackBar.show(
+                  rootContext, // ✅ مهم جدًا
+                  message: "تم تحديث المشروع بنجاح",
+                  type: SnackBarType.success,
+                );
+                return true;
+              },
             );
           },
         );
       },
     );
   }
+
 
   // === Contenu dynamique selon l'étape ===
   Widget _buildStepContent() {
@@ -173,7 +214,7 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
         );
 
       case 1:
-        return ProjectStagesSection(projectId: widget.projectId);
+        return ProjectStagesSection(projectId: widget.projectId,projectName:widget.projectName,);
       case 2:
         return ProjectOperationalsTest(projectId: widget.projectId);
       case 3:
@@ -382,6 +423,7 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),

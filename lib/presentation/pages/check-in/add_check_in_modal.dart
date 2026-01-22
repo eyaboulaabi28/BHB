@@ -280,7 +280,6 @@ class _AddDailyCheckInModalState extends State<AddDailyCheckInModal> {
                     options: engineers.map((e) => e.firstName ?? "").toList(),
                     controller: engineerCtrl,
                     rightIcon: const Icon(Icons.engineering, color: Colors.grey),
-                    validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار المهندس" : null,
                     onChanged: (value) async {
                       // 1️⃣ Récupérer l'ingénieur sélectionné
                       final eng = engineers.firstWhere((e) => e.firstName == value);
@@ -325,10 +324,6 @@ class _AddDailyCheckInModalState extends State<AddDailyCheckInModal> {
                     options: dailyTasks.isEmpty ? ["لا توجد مهام"] : dailyTasks.map((e) => e.titleTask ?? "").toList(),
                     controller: dailyTasksCtrl,
                     rightIcon: const Icon(Icons.title, color: Colors.grey),
-                    validator: (v) {
-                      if (dailyTasks.isEmpty) return "لا توجد مهام للاختيار";
-                      return (v == null || v.isEmpty) ? "الرجاء اختيار المهمة" : null;
-                    },
                     readOnly: dailyTasks.isEmpty,
                   ),
                   const SizedBox(height: 10),
@@ -386,7 +381,6 @@ class _AddDailyCheckInModalState extends State<AddDailyCheckInModal> {
                   ],
                   controller: statusCtrl,
                   rightIcon: const Icon(Icons.flag, color: Colors.grey),
-                  validator: (v) => (v == null || v.isEmpty) ? "الرجاء تحديد الحالة" : null,
                 ),
 
                 const SizedBox(height: 10),

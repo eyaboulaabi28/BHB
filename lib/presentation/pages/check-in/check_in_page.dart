@@ -15,8 +15,10 @@ import '../../../service_locator.dart';
 
 class CheckInPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const CheckInPage({super.key, required this.selectedType});
+  const CheckInPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<CheckInPage> createState() => _CheckInPageState();
@@ -368,6 +370,7 @@ class _CheckInPageState extends State<CheckInPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),

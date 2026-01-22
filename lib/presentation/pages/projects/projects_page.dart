@@ -17,7 +17,9 @@ import '../../../service_locator.dart';
 class ProjectsPage extends StatefulWidget {
   final String selectedType;
   final String userRole;
-  const ProjectsPage({super.key, required this.selectedType,required this.userRole,});
+  final String projectName;
+
+  const ProjectsPage({super.key, required this.selectedType,required this.userRole,required this.projectName});
 
   @override
   State<ProjectsPage> createState() => _ProjectsPageState();
@@ -307,6 +309,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),
@@ -327,28 +330,37 @@ class _ProjectsPageState extends State<ProjectsPage> {
           children: [
             // Titre et boutons d’action
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: TColor.secondary.withOpacity(0.2),
-                      child:
-                      Icon(Icons.apartment, color: TColor.primary, size: 30),
-                    ),
-                    const SizedBox(width: 15),
-                    Text(
-                      project.projectName ?? "بدون اسم",
-                      style: const TextStyle(
-                        fontFamily: 'Tajawal',
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: TColor.secondary.withOpacity(0.2),
+                        child: Icon(Icons.apartment, color: TColor.primary, size: 30),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+
+                      /// 👇 NOM DU PROJET SÉCURISÉ
+                      Expanded(
+                        child: Text(
+                          project.projectName ?? "بدون اسم",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Tajawal',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+
+                /// 👇 ACTIONS
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.visibility, color: Colors.blue),
@@ -359,15 +371,16 @@ class _ProjectsPageState extends State<ProjectsPage> {
                             builder: (context) => ProjectsDetailsPage(
                               projectId: project.id!,
                               selectedType: widget.selectedType,
+                              projectName: widget.projectName,
                             ),
                           ),
                         );
                       },
-                      tooltip: 'عرض التفاصيل',
                     ),
 
                     if (widget.userRole.toLowerCase() != 'customer')
                       IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () async {
                           final confirm = await CustomDialog.show(
                             context,
@@ -381,11 +394,9 @@ class _ProjectsPageState extends State<ProjectsPage> {
                             await _deleteProject(project.id!);
                           }
                         },
-                        icon: const Icon(Icons.delete, color: Colors.red),
                       ),
                   ],
                 ),
-
               ],
             ),
 

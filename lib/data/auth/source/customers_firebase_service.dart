@@ -11,17 +11,33 @@ abstract class CustomerFirebaseService {
 }
 
 class CustomerFirebaseServiceImpl extends CustomerFirebaseService {
-  final _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> get _customersCollection =>
+      _firestore.collection('Users');
 
   @override
-  Future<Either> addCustomer(Customers customer)  async{
+  Future<Either> addCustomer(Customers customer) async {
     try {
-      final doc = await _firestore.collection('Users').add(customer.toMap());
+      // 🔎 Vérifier unicité du numéro de téléphone
+      final query = await _customersCollection
+          .where('phone', isEqualTo: customer.phone)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        return Left("رقم الهاتف مستخدم بالفعل");
+      }
+
+      // ✅ Ajouter le customer
+      final doc = await _customersCollection.add(customer.toMap());
+
       return Right(doc.id);
     } catch (e) {
-      return Left('Error adding Customer: $e');
+      return Left(e.toString());
     }
   }
+
 
   @override
   Future<Either> deleteCustomers(String id) async {

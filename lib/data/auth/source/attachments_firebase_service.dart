@@ -17,12 +17,15 @@ class AttachmentsFirebaseServiceImpl extends AttachmentsFirebaseService {
   @override
   Future<Either<String, String>> addAttachment(Attachments attachment) async {
     try {
-      await _firestore.collection('Attachments').add(attachment.toMap());
-      return const Right('Attachment added successfully');
+      final docRef = await _firestore.collection('Attachments').add(attachment.toMap());
+      // Mettre à jour l'id du document ajouté
+      attachment.id = docRef.id;
+      return Right('Attachment added successfully');
     } catch (e) {
       return Left('Error adding attachment: $e');
     }
   }
+
 
   Future<Either<String, String>> deleteAttachment(String id) async {
     try {

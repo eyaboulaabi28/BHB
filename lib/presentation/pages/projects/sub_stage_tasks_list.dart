@@ -300,28 +300,114 @@ class TaskModernCard extends StatelessWidget {
                       builder: (context, setModalState) {
                         final picker = ImagePicker();
 
-                        Future<void> _pickImage(bool isBefore) async {
-                          final pickedFiles = await picker.pickMultiImage(imageQuality: 80);
-                          if (pickedFiles.isEmpty) return;
+                        Future<void> _showPickImageSheet({
+                          required bool isBefore,
+                          required BuildContext modalContext,
+                        }) async {
+                          final picker = ImagePicker();
 
-                          setModalState(() {
-                            if (kIsWeb) {
-                              for (var e in pickedFiles) {
-                                e.readAsBytes().then((bytes) {
-                                  if (isBefore)
-                                    imagesBeforeWeb.add(bytes);
-                                  else
-                                    imagesAfterWeb.add(bytes);
-                                  setModalState(() {});
-                                });
-                              }
-                            } else {
-                              if (isBefore)
-                                imagesBeforeMobile.addAll(pickedFiles.map((e) => File(e.path)));
-                              else
-                                imagesAfterMobile.addAll(pickedFiles.map((e) => File(e.path)));
-                            }
-                          });
+                          await showModalBottomSheet(
+                            context: modalContext,
+                            isScrollControlled: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            builder: (bottomSheetContext) {
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  left: 20,
+                                  right: 20,
+                                  top: 20,
+                                  bottom: MediaQuery.of(modalContext).viewInsets.bottom + 20,
+                                ),
+                                child: FractionallySizedBox(
+                                  heightFactor: 0.22,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      /// 📂 Galerie
+                                      ListTile(
+                                        leading: const Icon(Icons.photo_library, color: Colors.blue),
+                                        title: const Text("اختر من المعرض (يمكنك اختيار عدة صور)"),
+                                        onTap: () async {
+                                          final pickedFiles =
+                                          await picker.pickMultiImage(
+                                            imageQuality: 55,
+                                            maxWidth: 1280,
+                                            maxHeight: 1280,
+                                          );
+
+
+                                          if (pickedFiles.isNotEmpty) {
+                                            if (kIsWeb) {
+                                              final bytesList = await Future.wait(
+                                                pickedFiles.map((e) => e.readAsBytes()),
+                                              );
+                                              setModalState(() {
+                                                if (isBefore) {
+                                                  imagesBeforeWeb.addAll(bytesList);
+                                                } else {
+                                                  imagesAfterWeb.addAll(bytesList);
+                                                }
+                                              });
+                                            } else {
+                                              setModalState(() {
+                                                if (isBefore) {
+                                                  imagesBeforeMobile
+                                                      .addAll(pickedFiles.map((e) => File(e.path)));
+                                                } else {
+                                                  imagesAfterMobile
+                                                      .addAll(pickedFiles.map((e) => File(e.path)));
+                                                }
+                                              });
+                                            }
+                                          }
+                                          Navigator.pop(bottomSheetContext);
+                                        },
+                                      ),
+
+                                      /// 📷 Camera
+                                      ListTile(
+                                        leading: const Icon(Icons.camera_alt, color: Colors.green),
+                                        title: const Text("التقط صورة بالكاميرا"),
+                                        onTap: () async {
+                                          final picked = await picker.pickImage(
+                                            source: ImageSource.camera,
+                                            imageQuality: 55,
+                                            maxWidth: 1280,
+                                            maxHeight: 1280,
+                                          );
+
+
+                                          if (picked != null) {
+                                            if (kIsWeb) {
+                                              final bytes = await picked.readAsBytes();
+                                              setModalState(() {
+                                                if (isBefore) {
+                                                  imagesBeforeWeb.add(bytes);
+                                                } else {
+                                                  imagesAfterWeb.add(bytes);
+                                                }
+                                              });
+                                            } else {
+                                              setModalState(() {
+                                                if (isBefore) {
+                                                  imagesBeforeMobile.add(File(picked.path));
+                                                } else {
+                                                  imagesAfterMobile.add(File(picked.path));
+                                                }
+                                              });
+                                            }
+                                          }
+                                          Navigator.pop(bottomSheetContext);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
                         }
 
                         Widget _buildImageWidget(Object image, bool isBefore) {
@@ -395,7 +481,10 @@ class TaskModernCard extends StatelessWidget {
                             children: [
                               ...images.map((img) => _buildImageWidget(img, isBefore)).toList(),
                               GestureDetector(
-                                onTap: () => _pickImage(isBefore),
+                                onTap: () => _showPickImageSheet(
+                                  isBefore: isBefore,
+                                  modalContext: context,
+                                ),
                                 child: Container(
                                   height: 90,
                                   width: 90,
@@ -404,10 +493,15 @@ class TaskModernCard extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                   child: const Center(
-                                    child: Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey),
+                                    child: Icon(
+                                      Icons.add_photo_alternate,
+                                      size: 40,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ),
                               ),
+
                             ],
                           );
                         }
@@ -472,13 +566,12 @@ class TaskModernCard extends StatelessWidget {
                             ),
                           },
                             onSubmit: (values) async {
-                              // 1️⃣ حفظ context الأصلي للـ screen
                               final messenger = ScaffoldMessenger.of(rootContext);
 
-                              // 2️⃣ إغلاق الـ modal قبل أي عمليات طويلة
-                              Navigator.pop(context);
+                              // ❗ IMPORTANT : fermer le modal AVANT
+                              Navigator.of(context, rootNavigator: true).pop();
 
-                              // 3️⃣ إظهار Snackbar التحميل
+                              // ⏳ Snackbar loading
                               CustomSnackBar.show(
                                 rootContext,
                                 message: "⏳ جاري تحديث المهمة...",
@@ -490,11 +583,9 @@ class TaskModernCard extends StatelessWidget {
                                 List<String> finalImagesBefore = [];
                                 List<String> finalImagesAfter = [];
 
-                                // الاحتفاظ بالصور القديمة
                                 finalImagesBefore.addAll(imagesBeforeUrls.whereType<String>());
                                 finalImagesAfter.addAll(imagesAfterUrls.whereType<String>());
 
-                                // رفع الصور الجديدة
                                 if (kIsWeb) {
                                   for (var bytes in imagesBeforeWeb) {
                                     finalImagesBefore.add(await uploadImageWeb(bytes));
@@ -526,8 +617,9 @@ class TaskModernCard extends StatelessWidget {
 
                                 final result = await _updateTaskUseCase.call(params: updatedTask);
 
-                                // 4️⃣ إخفاء الـ loading أولًا قبل إظهار أي رسالة
                                 messenger.hideCurrentSnackBar();
+
+                                if (!rootContext.mounted) return;
 
                                 result.fold(
                                       (failure) => CustomSnackBar.show(
@@ -544,15 +636,21 @@ class TaskModernCard extends StatelessWidget {
                                     onTaskUpdated();
                                   },
                                 );
-                              } catch (e) {
+                              } catch (e, s) {
                                 messenger.hideCurrentSnackBar();
+                                if (!rootContext.mounted) return;
+
                                 CustomSnackBar.show(
                                   rootContext,
                                   message: "❌ حدث خطأ أثناء التحديث",
                                   type: SnackBarType.error,
                                 );
+
+                                debugPrint("UPDATE TASK ERROR: $e");
+                                debugPrintStack(stackTrace: s);
                               }
                             }
+
                         );
                       },
                     ),

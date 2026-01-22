@@ -19,21 +19,24 @@ class AuthFirebaseServiceImpl extends AuthFirebaseService {
     try {
       var returnData = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: user.email!,
-          password: user.password!);
-    await  FirebaseFirestore.instance.collection('Users').doc(
-        returnData.user!.uid
-      ).set({
-        'firstName':user.firstName,
+          password: user.password!
+      );
+      final uid = returnData.user!.uid;
+
+// ✅ Stocker exactement cet UID dans Firestore
+      await FirebaseFirestore.instance.collection('Users').doc(uid).set({
+        'firstName': user.firstName,
         'lastName': user.lastName,
-        'email':user.email,
-        'password':user.password,
-        'phone':user.phone,
-        'role':user.role,
+        'email': user.email,
+        'password': user.password,
+        'phone': user.phone,
+        'role': user.role,
         'status': user.role == "engineer" ? "pending" : "approved",
-      'latitude': user.latitude,
-      'longitude': user.longitude,
-    });
-    return const Right('Sign up was successfull');
+        'latitude': user.latitude,
+        'longitude': user.longitude,
+      });
+
+      return const Right('Sign up was successfull');
     } on FirebaseAuthException catch(e) {
       String message = '' ;
       if(e.code == 'weak-password'){
@@ -51,7 +54,6 @@ class AuthFirebaseServiceImpl extends AuthFirebaseService {
       return  Right(returnData.docs);
     }catch(e){return Left('Please try again');}
   }
-
   @override
   Future<Either> signin(UserSigninReq user) async {
     try {
@@ -115,7 +117,6 @@ class AuthFirebaseServiceImpl extends AuthFirebaseService {
       return Left(e.toString());
     }
   }
-
 
   @override
   Future<Either> updateUserProfile(String uid, Map<String, dynamic> data) async {

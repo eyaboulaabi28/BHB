@@ -4,12 +4,13 @@ import 'package:app_bhb/data/auth/models/engineers_model.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_customers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import '../../../service_locator.dart';
+
 class EditProjectModal extends StatefulWidget {
   final Project project;
   final void Function(Project updatedProject) onSubmit;
@@ -26,6 +27,8 @@ class EditProjectModal extends StatefulWidget {
 
 class _EditProjectModalState extends State<EditProjectModal> {
   late final Map<String, TextEditingController> _controllers;
+  double? selectedLat;
+  double? selectedLng;
 
   List<Customers> customers = [];
   List<Engineer> engineers = [];
@@ -88,6 +91,8 @@ class _EditProjectModalState extends State<EditProjectModal> {
         setState(() => _currentStep++);
       } else {
         final updatedProject = Project(
+          id: widget.project.id,
+          phoneNumber: widget.project.phoneNumber,
           municipality: _controllers["municipality"]!.text,
           district: _controllers["district"]!.text,
           projectName: _controllers["projectName"]!.text,
@@ -105,7 +110,12 @@ class _EditProjectModalState extends State<EditProjectModal> {
           engineerName: _controllers["engineerName"]!.text,
           reportDate: _controllers["reportDate"]!.text,
           phaseResult: _controllers["phaseResult"]!.text,
+
+          // ✅ latitude / longitude
+          latitude: selectedLat ?? widget.project.latitude,
+          longitude: selectedLng ?? widget.project.longitude,
         );
+
         widget.onSubmit(updatedProject);
         Navigator.pop(context);
       }
@@ -142,8 +152,6 @@ class _EditProjectModalState extends State<EditProjectModal> {
     }
   }
 
-  // 🔹 Tu peux réutiliser toutes les fonctions _buildStepContent, _buildInput, etc. de AddProjectModal
-  // juste en changeant le bouton "التالي" en "تحديث" à la dernière étape
   Widget _buildStepContent(int step) {
     switch (step) {
       case 0:
@@ -159,7 +167,32 @@ class _EditProjectModalState extends State<EditProjectModal> {
                   validator: "الرجاء إدخال البلدية"),
               _buildInput(Icons.work, "اسم المشروع", _controllers["projectName"]!,
                   validator: "الرجاء إدخال اسم المشروع"),
-              _buildInput(Icons.map, "عنوان المشروع", _controllers["projectAddress"]!),
+              _buildInput(
+                Icons.map,
+                "عنوان المشروع",
+                _controllers["projectAddress"]!,
+                maxLines: 5,
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SelectLocationMap(
+                        initialLat: widget.project.latitude,
+                        initialLng: widget.project.longitude,
+                      ),
+                    ),
+                  );
+
+                  if (result != null) {
+                    setState(() {
+                      _controllers["projectAddress"]!.text = result["address"];
+                      selectedLat = result["lat"];
+                      selectedLng = result["lng"];
+                    });
+                  }
+                },
+              ),
+
             ],
           ),
         );
@@ -187,10 +220,9 @@ class _EditProjectModalState extends State<EditProjectModal> {
                 Icons.description,
                 "وصف البناء",
                 _controllers["buildingDescription"]!,
-                minLines: 5, // 🔹 plus grand dès le départ
-                maxLines: 10, // 🔹 peut s'étendre jusqu'à 10 lignes
-              ),   _buildInput(Icons.description, "وصف البناء",
-                  _controllers["buildingDescription"]!,maxLines: 5,),
+                minLines: 5,
+                maxLines: 10,
+              ),
               _buildInput(Icons.stairs, "عدد الأدوار", _controllers["floorsCount"]!,
                   keyboard: TextInputType.number),
             ],
@@ -207,7 +239,7 @@ class _EditProjectModalState extends State<EditProjectModal> {
               _buildInput(Icons.design_services, "مكتب المصمم المعتمد",
                   _controllers["designerOffice"]!),
               _buildInput(Icons.architecture, "المكتب الهندسي المشرف",
-                  _controllers["supervisorOffice"]!,maxLines: 5,),
+                _controllers["supervisorOffice"]!,maxLines: 5,),
               _buildInput(Icons.business, "مقاول البناء", _controllers["contractor"]!),
               NewRoundSelectField(
                 hintText: "اسم المهندس المشرف",
@@ -255,10 +287,11 @@ class _EditProjectModalState extends State<EditProjectModal> {
       String hint,
       TextEditingController controller, {
         String? validator,
+        VoidCallback? onTap,
         TextInputType keyboard = TextInputType.text,
         bool isDate = false,
         int minLines = 1, // 🔹 nombre de lignes par défaut
-        int maxLines = 1, // 🔹 nombre max de lignes
+        int maxLines = 5, // 🔹 nombre max de lignes
       }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -273,6 +306,7 @@ class _EditProjectModalState extends State<EditProjectModal> {
             : null,
         keyboardType: keyboard,
         obscureText: false,
+        onTap: onTap,
         minLines: minLines,
         maxLines: maxLines,
         right: isDate
@@ -399,4 +433,3 @@ class _EditProjectModalState extends State<EditProjectModal> {
     );
   }
 }
-

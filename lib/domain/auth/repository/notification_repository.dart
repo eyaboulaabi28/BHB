@@ -6,5 +6,5 @@ abstract class NotificationRepository {
   Future<void> createNotification(NotificationsModel notification);
   Future<Either> getAllNotifications();
   Future<void> markAsRead(String id);
-
+  Stream<int> unreadCount(String userId);
 }

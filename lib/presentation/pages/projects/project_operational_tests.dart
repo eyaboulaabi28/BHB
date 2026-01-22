@@ -5,6 +5,7 @@ import 'package:app_bhb/presentation/pages/projects/add_task_test_dialog.dart';
 import 'package:app_bhb/presentation/pages/projects/final_commissioning_tests.dart';
 import 'package:app_bhb/presentation/pages/projects/global_project_pdf_generator.dart';
 import 'package:app_bhb/presentation/pages/projects/global_section_pdf_generator.dart';
+import 'package:app_bhb/presentation/pages/projects/global_section_pdf_generator1.dart';
 import 'package:app_bhb/presentation/pages/projects/operational_tests_pdf_generator.dart';
 import 'package:app_bhb/presentation/pages/projects/tasks_test_list.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,7 +25,6 @@ class ProjectOperationalsTest extends StatefulWidget {
 
 class _ProjectOperationalsTestState extends State<ProjectOperationalsTest> {
   Map<String, dynamic> _testsStatus = {};
-
   List<Map<String, dynamic>> _sections = [];
 
   String? _userRole;
@@ -139,9 +139,9 @@ class _ProjectOperationalsTestState extends State<ProjectOperationalsTest> {
 
               ElevatedButton.icon(
                 onPressed: () {
-                  GlobalSectionPdfGenerator(
+                  GlobalSectionPdfGenerator1(
                     projectId: widget.projectId,
-                    section: finalCommissioningTests,
+                    sections: _sections,
                   ).generate(context);
                 },
                 icon: const Icon(Icons.picture_as_pdf_rounded, size: 22),

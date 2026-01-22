@@ -45,8 +45,7 @@ class GetProjectByIdUseCase implements UseCase<Either, String> {
   }
 }
 
-class UpdateSubStageStatusUseCase
-    implements UseCase<void, UpdateSubStageStatusParams> {
+class UpdateSubStageStatusUseCase implements UseCase<void, UpdateSubStageStatusParams> {
 
   final ProjectsRepository _repository;
 
@@ -62,8 +61,7 @@ class UpdateSubStageStatusUseCase
     );
   }
 }
-class UpdateStageStatusUseCase
-    implements UseCase<void, UpdateStageStatusParams> {
+class UpdateStageStatusUseCase implements UseCase<void, UpdateStageStatusParams> {
 
   final ProjectsRepository _repository;
 
@@ -158,5 +156,15 @@ class UpdateTestStatusUseCase
       params.testId,
       params.status,
     );
+  }
+}
+class UpdateProjectUseCase implements UseCase<Either, Project> {
+  final ProjectsRepository _repo;
+
+  UpdateProjectUseCase(this._repo);
+
+  @override
+  Future<Either> call({Project? params}) async {
+    return await _repo.updateProject(params!);
   }
 }

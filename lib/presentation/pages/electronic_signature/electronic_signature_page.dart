@@ -16,8 +16,10 @@ import '../../../service_locator.dart';
 
 class ElectronicSignaturePage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const ElectronicSignaturePage({super.key, required this.selectedType});
+  const ElectronicSignaturePage({super.key, required this.selectedType, required this.projectName
+  });
 
   @override
   State<ElectronicSignaturePage> createState() => _ElectronicSignaturePageState();
@@ -338,7 +340,7 @@ class _ElectronicSignaturePageState extends State<ElectronicSignaturePage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
-
+          projectName: widget.projectName,
         ),
       ),
     );

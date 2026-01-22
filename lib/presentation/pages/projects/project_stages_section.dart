@@ -1,5 +1,6 @@
 import 'package:app_bhb/data/auth/source/auth_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/projects_firebase_service.dart';
+import 'package:app_bhb/presentation/pages/projects/GlobalStagesPdfGenerator1.dart';
 import 'package:app_bhb/presentation/pages/projects/global_project_pdf_generator.dart';
 import 'package:app_bhb/presentation/pages/projects/predefined_phases.dart';
 import 'package:app_bhb/presentation/pages/projects/stage_pdf_generator.dart' hide TColor;
@@ -13,8 +14,9 @@ import 'project_stages_sub_section.dart';
 
 class ProjectStagesSection extends StatefulWidget {
   final String projectId;
+  final String projectName;
 
-  const ProjectStagesSection({super.key, required this.projectId});
+  const ProjectStagesSection({super.key, required this.projectId,required this.projectName});
 
   @override
   State<ProjectStagesSection> createState() => _ProjectStagesSectionState();
@@ -144,7 +146,7 @@ class _ProjectStagesSectionState extends State<ProjectStagesSection> {
 
           ElevatedButton.icon(
             onPressed: () {
-              GlobalStagesPdfGenerator(
+              GlobalStagesPdfGenerator1(
                 projectId: widget.projectId,
                 stages: _stages,
               ).generate(context);
@@ -268,6 +270,7 @@ class _ProjectStagesSectionState extends State<ProjectStagesSection> {
                         stage['subPhases']),
                     onSubStatusChanged: _onSubStageStatusChanged,
                     projectId: widget.projectId,
+                    projectName: widget.projectName,
                   ),
                 ],
               ),

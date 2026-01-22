@@ -15,8 +15,10 @@ import 'package:flutter/material.dart';
 import '../../../service_locator.dart';
 class EngineerEvaluationPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const EngineerEvaluationPage({super.key, required this.selectedType});
+  const EngineerEvaluationPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<EngineerEvaluationPage> createState() => _EngineerEvaluationPageState();
@@ -470,6 +472,7 @@ class _EngineerEvaluationPageState extends State<EngineerEvaluationPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),

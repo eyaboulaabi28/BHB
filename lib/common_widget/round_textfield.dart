@@ -63,10 +63,10 @@ class NewRoundTextField extends StatelessWidget {
   final Widget? right;
   final bool isPadding;
   final String? Function(String?)? validator;
-  final int maxLines;
+  final int? maxLines;
   final bool readOnly;
   final void Function(String)? onChanged;
-  final int minLines;
+  final int? minLines;
   final VoidCallback? onTap;
 
   const NewRoundTextField({
@@ -90,7 +90,7 @@ class NewRoundTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return FormField<String>(
       validator: validator,
-      key:key,
+      key: key,
       initialValue: initialValue,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       builder: (state) {
@@ -100,16 +100,15 @@ class NewRoundTextField extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: maxLines > 1 ? null : 60,
+              // 🔹 Hauteur dynamique pour texte arabe
+              height: (maxLines ?? 1) > 1 ? null : 60,
               margin: EdgeInsets.symmetric(horizontal: isPadding ? 20 : 0),
               decoration: BoxDecoration(
                 color: readOnly ? Colors.grey.shade200 : Colors.white,
-                // 🔥 ICI : BORDER PASSE EN ROUGE SI ERREUR
                 border: Border.all(
                   color: hasError ? Colors.red : Colors.black12,
                   width: 1.5,
                 ),
-
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: readOnly
                     ? null
@@ -123,36 +122,38 @@ class NewRoundTextField extends StatelessWidget {
                   textAlign: TextAlign.right,
                   obscureText: obscureText,
                   readOnly: readOnly,
-                  minLines: minLines,
-                  maxLines: maxLines,
+                  minLines: (minLines != null && minLines! > 0) ? minLines : 1,
+                  maxLines: maxLines ?? 10,
+                  style: const TextStyle(
+                    fontFamily: 'Tajawal', // 🔹 Police arabe correcte
+                    fontSize: 16,
+                    height: 1.4, // 🔹 Ligne ajustée pour lettres arabes
+                  ),
                   onTap: onTap,
                   onChanged: (value) {
                     onChanged?.call(value);
                     state.didChange(value);
                   },
                   decoration: InputDecoration(
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-
-                    // Supprimer erreurs Flutter (ligne rouge)
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 20),
                     border: InputBorder.none,
                     errorBorder: InputBorder.none,
                     focusedErrorBorder: InputBorder.none,
-
                     hintText: hintText,
                     hintStyle: TextStyle(
+                      fontFamily: 'Tajawal', // 🔹 hint en arabe lisible
                       color: readOnly
                           ? Colors.grey.shade500
                           : Colors.grey.shade400,
                       fontSize: 17,
+                      height: 1.4,
                     ),
                     suffixIcon: right,
                   ),
                 ),
               ),
             ),
-
-            // 🔥 Message d’erreur propre sous le champ (optionnel)
             if (hasError)
               Padding(
                 padding: const EdgeInsets.only(right: 25, top: 4),

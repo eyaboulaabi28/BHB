@@ -1,12 +1,17 @@
 import 'package:app_bhb/data/auth/models/sub_stages_model.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_projects.dart';
 import 'package:app_bhb/presentation/pages/projects/add_task_dialog.dart';
 import 'package:app_bhb/presentation/pages/projects/sub_stage_tasks_list.dart';
 import 'package:flutter/material.dart';
+
+import '../../../service_locator.dart';
 
 class ProjectStagesSubSectionStatic extends StatefulWidget {
   final String stageId; // 🔴 AJOUT
   final List<Map<String, dynamic>> subStages;
   final String projectId;
+  final String projectName;
+
   final Function(
       String stageId,
       String subId,
@@ -19,6 +24,7 @@ class ProjectStagesSubSectionStatic extends StatefulWidget {
     required this.subStages,
     required this.projectId,
     required this.onSubStatusChanged,
+    required this.projectName,
   });
 
   @override
@@ -28,6 +34,37 @@ class ProjectStagesSubSectionStatic extends StatefulWidget {
 
 
 class _ProjectStagesSubSectionStaticState extends State<ProjectStagesSubSectionStatic> {
+
+  final GetProjectByIdUseCase _getProjectByIdUseCase = sl<GetProjectByIdUseCase>();
+  String? _projectNameFromFirebase;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProjectName();
+
+  }
+
+  Future<void> _loadProjectName() async {
+    final result = await _getProjectByIdUseCase.call(
+      params: widget.projectId,
+    );
+
+    result.fold(
+          (failure) {
+        debugPrint('❌ Erreur récupération projet: $failure');
+      },
+          (project) {
+        debugPrint(
+          '📌 Project ID: ${project.id} | Project Name: ${project.projectName}',
+        );
+        setState(() {
+          _projectNameFromFirebase = project.projectName;
+        });
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -127,8 +164,10 @@ class _ProjectStagesSubSectionStaticState extends State<ProjectStagesSubSectionS
                           BorderRadius.vertical(top: Radius.circular(25)),
                         ),
                         builder: (_) => AddTaskDialog(
+
                           subStage: fakeSubStage,
                           projectId: widget.projectId,
+                          projectName: _projectNameFromFirebase!,
                         ),
                       );
                     },

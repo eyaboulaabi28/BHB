@@ -1,3 +1,4 @@
+import 'package:app_bhb/common_widget/app_keys.dart';
 import 'package:flutter/material.dart';
 
 enum SnackBarType { success, error, warning, info, loading }
@@ -9,6 +10,7 @@ class CustomSnackBar {
         bool textAlignRight = false,
         required SnackBarType type,
         Duration duration = const Duration(seconds: 5),
+
       }) {
     String emoji;
     Color backgroundColor;
@@ -36,7 +38,7 @@ class CustomSnackBar {
         break;
     }
 
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final messenger = scaffoldMessengerKey.currentState;
     if (messenger == null) return;
 
     final snackBar = SnackBar(

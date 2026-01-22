@@ -8,6 +8,7 @@ abstract class ProjectsFirebaseService {
   Future<Either> addProject(Project project);
   Future<Either> getAllProjects();
   Future<Either> deleteProject(String id);
+  Future<Either> updateProject(Project project);
   Future<Either> getProjectById(String id);
   Future<void> updateSubStageStatus(
       String projectId,
@@ -69,16 +70,29 @@ class ProjectsFirebaseServiceImpl extends ProjectsFirebaseService {
   @override
   Future<Either> addProject(Project project) async {
     try {
+      // 1️⃣ Vérifier si le customer a déjà un projet
+      final existing = await _projectsCollection
+          .where('ownerName', isEqualTo: project.ownerName)
+          .limit(1)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        return Left("هذا العميل لديه مشروع بالفعل");
+      }
+
+      // 2️⃣ Ajouter le projet
       await _projectsCollection.add({
         ...project.toMap(),
         'stagesStatus': buildInitialStagesStatus(),
         'testsStatus': buildInitialTestsStatus(),
       });
-      return const Right('Project added successfully');
+
+      return const Right("Project added successfully");
     } catch (e) {
       return Left(e.toString());
     }
   }
+
   @override
   Future<Either> getAllProjects() async{
     try {
@@ -175,5 +189,22 @@ class ProjectsFirebaseServiceImpl extends ProjectsFirebaseService {
       'testsStatus.$sectionId.status': status,
     });
   }
+
+  @override
+  Future<Either> updateProject(Project project) async {
+    try {
+      await _projectsCollection
+          .doc(project.id)
+          .update(project.toMap());
+
+      print("✅ Project updated: ${project.id}");
+      return const Right(true);
+    } catch (e) {
+      print("❌ Update error: $e");
+      return Left(e.toString());
+    }
+  }
+
+
 
 }

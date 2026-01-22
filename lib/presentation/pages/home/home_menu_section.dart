@@ -17,7 +17,10 @@ import 'package:app_bhb/common/color_extension.dart';
 class HomeMenuSection extends StatelessWidget {
   final String selectedType;
   final String userRole;
-  const HomeMenuSection({super.key, required this.selectedType, required this.userRole});
+  final String projectName;
+
+  const HomeMenuSection({super.key, required this.selectedType, required this.userRole,    required this.projectName
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,28 +32,28 @@ class HomeMenuSection extends StatelessWidget {
           "icon": Icons.engineering,
           "color": Colors.red.shade100,
           "title": "إدارة المهندسين",
-          "page": const EngineersPage(selectedType: ""),
+          "page": const EngineersPage(selectedType: "",projectName: "",),
           "roles": ["admin"]
         },
         {
           "icon": Icons.group,
           "color": Colors.blue.shade100,
           "title": " إدارة العملاء ",
-          "page": const CustomersPage(selectedType: ""),
+          "page": const CustomersPage(selectedType: "",projectName: "",),
           "roles": ["admin", "resource",],
         },
         {
           "icon": Icons.manage_accounts,
           "color": Colors.green.shade50,
           "title": "إدارة الموظفين",
-          "page": const EmployeesPage(selectedType: ""),
+          "page": const EmployeesPage(selectedType: "",projectName: "",),
           "roles": ["admin"],
         },
         {
           "icon": Icons.inventory,
           "color": Colors.orangeAccent.shade100,
           "title": "إدارة المواد",
-          "page": const MaterialsPage(selectedType: ""),
+          "page": const MaterialsPage(selectedType: "",projectName: "",),
           "roles": ["admin", "resource",],
 
         },
@@ -58,7 +61,7 @@ class HomeMenuSection extends StatelessWidget {
           "icon": Icons.list_alt,
           "color": Colors.yellowAccent.shade100,
           "title": "عرض المشاريع",
-          "page": ProjectsPage(selectedType: selectedType,userRole:userRole),
+          "page": ProjectsPage(selectedType: selectedType,userRole:userRole,projectName: "",),
           "roles": ["admin", "engineer", "customer"],
 
         },
@@ -66,14 +69,14 @@ class HomeMenuSection extends StatelessWidget {
           "icon": Icons.bar_chart,
           "color": Colors.brown.shade100,
           "title": "تقرير الحضور",
-          "page": CheckInPage(selectedType: ""),
+          "page": CheckInPage(selectedType: "",projectName: "",),
           "roles": ["admin","engineer"],
         },
         {
           "icon": Icons.calendar_today,
           "color": Colors.lightBlue.shade100,
           "title": "الجداول اليومية",
-          "page": DailyTasksPage(selectedType: ""),
+          "page": DailyTasksPage(selectedType: "",projectName: "",),
           "roles": ["admin","engineer"],
 
         },
@@ -81,42 +84,42 @@ class HomeMenuSection extends StatelessWidget {
           "icon": Icons.rate_review,
           "color": Colors.purple.shade100,
           "title": "تقييم الفنيين",
-          "page": EngineerEvaluationPage(selectedType: ""),
+          "page": EngineerEvaluationPage(selectedType: "",projectName: "",),
           "roles": ["admin"],
         },
         {
           "icon": Icons.insert_drive_file,
           "color": Colors.deepPurple.shade100,
           "title": "محاضر الاجتماعات",
-          "page": const MeetingPage(selectedType: ""),
+          "page": const MeetingPage(selectedType: "",projectName: "",),
           "roles": ["admin", "engineer", "customer"],
         },
         {
           "icon": Icons.settings,
           "color": Colors.lightGreenAccent.shade100,
           "title": "الإعدادات العامة",
-          "page": const SettingsPage(selectedType: ""),
+          "page": const SettingsPage(selectedType: "",projectName: "",),
           "roles": ["admin",],
         },
         {
           "icon": Icons.schedule,
           "color": Colors.redAccent.shade100,
           "title": "إعدادات العطل",
-          "page": const VacationPage(selectedType: ""),
+          "page": const VacationPage(selectedType: "",projectName: "",),
           "roles": ["admin"],
         },
         {
           "icon": Icons.phone,
           "color": Colors.orange.shade50,
           "title": "تواصل معنا",
-          "page": const ContactPage(selectedType: ""),
+          "page": const ContactPage(selectedType: "",projectName: "",),
           "roles": ["admin", "engineer", "customer"]
         },
         {
           "icon": Icons.edit_note,
           "color": Colors.teal.shade100,
           "title": "التوقيع الإلكتروني",
-          "page": const ElectronicSignaturePage(selectedType: ""),
+          "page": const ElectronicSignaturePage(selectedType: "",projectName: "",),
           "roles": ["admin","engineer", "customer"],
         },
 

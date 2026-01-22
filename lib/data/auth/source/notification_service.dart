@@ -1,6 +1,8 @@
 
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationService {
   final CreateNotificationUseCase _createNotificationUseCase;
@@ -24,4 +26,5 @@ class NotificationService {
 
     await _createNotificationUseCase(notification: notif);
   }
+
 }

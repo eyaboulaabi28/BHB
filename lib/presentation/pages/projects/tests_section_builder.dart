@@ -8,6 +8,7 @@ class TestsSectionBuilder {
   final List<TasksTests> tasks;
   final pw.Font arabicFont;
   final pw.Font emojiFont;
+  final String projectId;
 
   final Map<String, List<Uint8List>> imagesMap; // bytes images
   final Map<String, String> imageDownloadUrlMap; // urls firebase
@@ -19,10 +20,11 @@ class TestsSectionBuilder {
     required this.emojiFont,
     required this.imagesMap,
     required this.imageDownloadUrlMap,
+    required this.projectId,
   });
 
   String _buildWebGalleryUrl(String subTestId) {
-    return "https://bhbgroup-ed1bc.web.app/test?subTestId=$subTestId";
+    return "https://bhbgroup-ed1bc.web.app/test.html?subTestId=$subTestId&projectId=$projectId";
   }
 
   pw.Widget build() {
@@ -135,7 +137,7 @@ class TestsSectionBuilder {
               border: pw.Border.all(color: PdfColors.grey400),
             ),
             child: pw.Text(
-              "https://bhbgroup-ed1bc.web.app/test?subTestId=${test['id']}",
+              _buildWebGalleryUrl(test['id']),
               style: pw.TextStyle(
                 fontSize: 6,
                 color: PdfColors.black,

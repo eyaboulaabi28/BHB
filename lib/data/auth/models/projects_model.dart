@@ -20,6 +20,8 @@ class Project {
   String? phoneNumber;
   Map<String, dynamic>? stagesStatus;
   Map<String, dynamic>? testsStatus;
+  final double? latitude;
+  final double? longitude;
 
   Project({
     this.id,
@@ -43,6 +45,9 @@ class Project {
     this.phoneNumber,
     this.stagesStatus,
     this.testsStatus,
+    this.longitude,
+    this.latitude,
+
   });
 
   // 🔁 Conversion de l’objet en Map pour Firestore ou API
@@ -68,6 +73,8 @@ class Project {
       'phoneNumber':phoneNumber,
       'stagesStatus': stagesStatus,
       'testsStatus': testsStatus ?? {},
+      "latitude": latitude,
+      "longitude": longitude,
     };
   }
 
@@ -75,6 +82,8 @@ class Project {
   factory Project.fromMap(String id, Map<String, dynamic> map) {
     return Project(
       id: id,
+      latitude: map["latitude"],
+      longitude: map["longitude"],
       municipality: map['municipality'],
       district: map['district'],
       projectName: map['projectName'],
@@ -99,6 +108,7 @@ class Project {
       testsStatus: map['testsStatus'] != null
           ? Map<String, dynamic>.from(map['testsStatus'])
           : {},
+
     );
 
   }

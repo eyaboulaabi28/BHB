@@ -18,8 +18,9 @@ import '../../../service_locator.dart';
 
 class SettingsPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const SettingsPage({super.key, required this.selectedType});
+  const SettingsPage({super.key, required this.selectedType, required this.projectName});
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
@@ -255,6 +256,7 @@ class _SettingsPageState extends State<SettingsPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),

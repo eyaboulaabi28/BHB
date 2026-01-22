@@ -25,3 +25,10 @@ class MarkNotificationAsReadUseCase {
     await _repo.markAsRead(id);
   }
 }
+class GetUnreadNotificationCountUseCase {
+  final NotificationRepository _repo = sl<NotificationRepository>();
+
+  Stream<int> call(String userId) {
+    return _repo.unreadCount(userId);
+  }
+}

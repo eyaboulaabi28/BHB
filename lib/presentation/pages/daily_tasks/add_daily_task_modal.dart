@@ -187,7 +187,7 @@ class _AddDailyTaskModalState extends State<AddDailyTaskModal> {
                   options: engineers.map((e) => e.firstName ?? "").toList(),
                   controller: engineerCtrl,
                   rightIcon: const Icon(Icons.engineering, color: Colors.grey),
-                  validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار المهندس" : null,
+                  enableSearch: true,
                 ),
                 const SizedBox(height: 10),
 
@@ -197,7 +197,7 @@ class _AddDailyTaskModalState extends State<AddDailyTaskModal> {
                   options: projects.map((p) => p.projectName ?? "").toList(),
                   controller: projectCtrl,
                   rightIcon: const Icon(Icons.apartment, color: Colors.grey),
-                  validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار المشروع" : null,
+                  enableSearch: true,
                 ),
                 const SizedBox(height: 10),
 
@@ -248,7 +248,6 @@ class _AddDailyTaskModalState extends State<AddDailyTaskModal> {
                   ],
                   controller: statusCtrl,
                   rightIcon: const Icon(Icons.flag, color: Colors.grey),
-                  validator: (v) => (v == null || v.isEmpty) ? "الرجاء تحديد الحالة" : null,
                 ),
 
                 const SizedBox(height: 10),

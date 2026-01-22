@@ -11,8 +11,10 @@ import '../../../common_widget/custom_bottom_nav.dart';
 
 class UserPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const UserPage({super.key, required this.selectedType});
+  const UserPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<UserPage> createState() => _UserPageState();
@@ -129,7 +131,7 @@ class _UserPageState extends State<UserPage> {
                       CircleAvatar(
                         radius: 55,
                         backgroundColor: Colors.grey[200],
-                        backgroundImage: const AssetImage("img/profile.png"),
+                        backgroundImage: const AssetImage("assets/img/profile1.png"),
                       ),
                       const SizedBox(height: 15),
 
@@ -232,6 +234,7 @@ class _UserPageState extends State<UserPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
         ),
       ),
     );

@@ -8,22 +8,29 @@ import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 
 
-
 class MeetingPdfGenerator {
   static Future<pw.Document> generate({
     required Meeting meeting,
   }) async {
-
     final pdf = pw.Document();
 
-
-
-    // ⚠️ أنصحك مؤقتًا بدون emojiFont (أكثر استقرار)
+    // ⚠️ Police arabe et emoji
     final arabicFont = pw.Font.ttf(await rootBundle.load("assets/font/NotoSansArabic-Regular.ttf"));
     final emojiFont = pw.Font.ttf(await rootBundle.load("assets/font/NotoEmoji-Regular.ttf"));
-    final meetingImage = await imageFromUrl(meeting.imageUrl);
+
+    // 🔹 Images du meeting (plusieurs)
+    List<pw.ImageProvider> meetingImages = [];
+    if (meeting.imageUrls != null && meeting.imageUrls!.isNotEmpty) {
+      for (final url in meeting.imageUrls!) {
+        final img = await imageFromUrl(url);
+        if (img != null) meetingImages.add(img);
+      }
+    }
+
+    // 🔹 Signature (une seule)
     final signatureImage = await imageFromUrl(meeting.signatureUrl);
 
+    // 🔹 Logos & emojis pour footer/header
     final logo = await imageFromAssetBundle("assets/img/app_logo.png");
     final fbEmoji = await imageFromAssetBundle("assets/img/fb.png");
     final googleEmoji = await imageFromAssetBundle("assets/img/google.png");
@@ -33,13 +40,11 @@ class MeetingPdfGenerator {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         textDirection: pw.TextDirection.rtl,
-
         header: (_) => CommonPdfHeaderFooter.buildHeader(
           arabicFont: arabicFont,
           emojiFont: emojiFont,
           logo: logo,
         ),
-
         footer: (_) => CommonPdfHeaderFooter.buildFooter(
           arabicFont: arabicFont,
           emojiFont: emojiFont,
@@ -53,7 +58,7 @@ class MeetingPdfGenerator {
           _buildMeetingInfo(
             meeting,
             arabicFont,
-            meetingImage: meetingImage,
+            meetingImages: meetingImages,
             signatureImage: signatureImage,
           ),
         ],
@@ -65,11 +70,10 @@ class MeetingPdfGenerator {
 
   // =============================
 
-
   static pw.Widget _buildMeetingInfo(
       Meeting meeting,
       pw.Font arabicFont, {
-        pw.ImageProvider? meetingImage,
+        List<pw.ImageProvider>? meetingImages,
         pw.ImageProvider? signatureImage,
       }) {
     String formatDate(DateTime? date) {
@@ -110,6 +114,27 @@ class MeetingPdfGenerator {
       );
     }
 
+    List<pw.Widget> imageWidgets = [];
+    if (meetingImages != null && meetingImages.isNotEmpty) {
+      for (final img in meetingImages) {
+        imageWidgets.add(
+          pw.Container(
+            height: 200,
+            margin: const pw.EdgeInsets.only(bottom: 12),
+            decoration: pw.BoxDecoration(
+              borderRadius: pw.BorderRadius.circular(14),
+              border: pw.Border.all(color: PdfColors.grey400),
+            ),
+            child: pw.ClipRRect(
+              horizontalRadius: 14,
+              verticalRadius: 14,
+              child:pw.Image(img, fit: pw.BoxFit.contain),
+            ),
+          ),
+        );
+      }
+    }
+
     return pw.Container(
       padding: const pw.EdgeInsets.all(18),
       decoration: pw.BoxDecoration(
@@ -127,8 +152,7 @@ class MeetingPdfGenerator {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-
-          // 🔹 INFORMATIONS
+          // 🔹 Infos
           infoRow("عنوان الاجتماع", meeting.titleMeeting ?? "-"),
           infoRow("وصف الاجتماع", meeting.description ?? "-"),
           infoRow("نوع الاجتماع", meeting.type ?? "-"),
@@ -137,11 +161,11 @@ class MeetingPdfGenerator {
           infoRow("العميل", meeting.nameCustomer ?? "-"),
           infoRow("تاريخ الاجتماع", formatDate(meeting.dateMeeting)),
 
-          // 🔸 IMAGE MEETING
-          if (meetingImage != null) ...[
+          // 🔸 Images
+          if (meetingImages != null && meetingImages.isNotEmpty) ...[
             pw.SizedBox(height: 22),
             pw.Text(
-              " صورة الاجتماع",
+              "صور الاجتماع",
               style: pw.TextStyle(
                 font: arabicFont,
                 fontSize: 14,
@@ -150,28 +174,33 @@ class MeetingPdfGenerator {
               ),
             ),
             pw.SizedBox(height: 10),
-            pw.Container(
-              height: 200,
-              decoration: pw.BoxDecoration(
-                borderRadius: pw.BorderRadius.circular(14),
-                border: pw.Border.all(color: PdfColors.grey400),
-              ),
-              child: pw.ClipRRect(
-                horizontalRadius: 14,
-                verticalRadius: 14,
-                child: pw.Image(
-                  meetingImage,
-                  fit: pw.BoxFit.cover,
-                ),
-              ),
+            pw.Wrap(
+              spacing: 10, // مسافة أفقية بين الصور
+              runSpacing: 10, // مسافة عمودية بين السطور
+              children: meetingImages.map((img) {
+                return pw.Container(
+                  width: 180, // خفّضنا العرض شوية
+                  height: 180,
+                  decoration: pw.BoxDecoration(
+                    borderRadius: pw.BorderRadius.circular(14),
+                    border: pw.Border.all(color: PdfColors.grey400),
+                  ),
+                  child: pw.ClipRRect(
+                    horizontalRadius: 14,
+                    verticalRadius: 14,
+                    child: pw.Image(img, fit: pw.BoxFit.contain),
+                  ),
+                );
+              }).toList(),
             ),
+
           ],
 
-          // 🔸 SIGNATURE CLIENT
+          // 🔸 Signature
           if (signatureImage != null && meeting.type == "مع العميل") ...[
             pw.SizedBox(height: 26),
             pw.Text(
-              " توقيع العميل",
+              "توقيع العميل",
               style: pw.TextStyle(
                 font: arabicFont,
                 fontSize: 14,
@@ -188,29 +217,65 @@ class MeetingPdfGenerator {
                 borderRadius: pw.BorderRadius.circular(14),
                 border: pw.Border.all(color: PdfColors.grey400),
               ),
-              child: pw.Image(
-                signatureImage,
-                fit: pw.BoxFit.contain,
-              ),
+              child: pw.Image(signatureImage, fit: pw.BoxFit.contain),
             ),
           ],
+
+          // ─────────── Paragraphe final ⚠️ ───────────
+          pw.SizedBox(height: 20),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('#FDE2E2'), // fond rouge clair
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+              border: pw.Border.all(color: PdfColor.fromHex('#D32F2F'), width: 1), // bordure rouge foncé
+            ),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Expanded(
+                  child: pw.Text(
+                    "  يُعتبر هذا التقرير نهائيًا ومعتمدًا تلقائيًا بعد مرور 48 ساعة من تاريخ إرساله، ما لم يُقدَّم اعتراض خطي ومعتمد خلال هذه الفترة. ",
+                    style: pw.TextStyle(
+                      font: arabicFont,
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#B71C1C'), // texte rouge foncé
+                    ),
+                    textAlign: pw.TextAlign.center,
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 20),
         ],
       ),
     );
+
   }
 
-
+  // =============================
   static Future<pw.ImageProvider> imageFromAssetBundle(String path) async {
     final bytes = await rootBundle.load(path);
     return pw.MemoryImage(bytes.buffer.asUint8List());
   }
+
+  static Future<pw.ImageProvider?> imageFromUrl(String? url) async {
+    if (url == null || url.isEmpty) return null;
+    try {
+      return await networkImage(url);
+    } catch (e) {
+      debugPrint("❌ Image load failed: $e");
+      return null;
+    }
+  }
+
   // =============================
-// 🧾 TITLE MODERNE
-  static pw.Widget _buildTitle(
-      pw.Font arabicFont,
-      pw.Font emojiFont,
-      Meeting meeting,
-      ) {
+  static pw.Widget _buildTitle(pw.Font arabicFont, pw.Font emojiFont, Meeting meeting) {
     return pw.Center(
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -227,9 +292,7 @@ class MeetingPdfGenerator {
             textDirection: pw.TextDirection.rtl,
             textAlign: pw.TextAlign.center,
           ),
-
           pw.SizedBox(height: 3),
-
           pw.Container(
             height: 4,
             width: 150,
@@ -240,26 +303,12 @@ class MeetingPdfGenerator {
                   PdfColor.fromHex('#022C43'),
                 ],
               ),
-              borderRadius: const pw.BorderRadius.all(
-                pw.Radius.circular(2),
-              ),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
             ),
           ),
         ],
       ),
     );
   }
-
-  static Future<pw.ImageProvider?> imageFromUrl(String? url) async {
-    if (url == null || url.isEmpty) return null;
-
-    try {
-      return await networkImage(url);
-    } catch (e) {
-      debugPrint("❌ Image load failed: $e");
-      return null;
-    }
-  }
-
-
 }
+

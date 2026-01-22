@@ -167,7 +167,6 @@ class _AddSettingsModalState extends State<AddSettingsModal> {
                     "فني", "مهندس", "مدير النظام"
                   ],
                   controller: employeeRankCtrl,
-                  validator: (v) => v == null ? "الرجاء اختيار الرتبة" : null,
                   rightIcon: const Icon(Icons.category, color: Colors.grey),
                 ),
 

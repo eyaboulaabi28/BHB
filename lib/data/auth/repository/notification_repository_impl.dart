@@ -20,4 +20,9 @@ class NotificationRepositoryImpl extends NotificationRepository {
   Future<void> markAsRead(String id) async {
     return await sl<NotificationFirebaseService>().markAsRead(id);
   }
+  @override
+  Stream<int> unreadCount(String userId) {
+    return sl<NotificationFirebaseService>()
+        .unreadNotificationsCount(userId);
+  }
 }

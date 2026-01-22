@@ -51,4 +51,9 @@ class ProjectsRepositoryImpl extends ProjectsRepository {
     return await sl<ProjectsFirebaseService>().updateTestStatus(projectId, sectionId, testId, status);
 
   }
+
+  @override
+  Future<Either> updateProject(Project project) async {
+    return await sl<ProjectsFirebaseService>().updateProject(project);
+  }
 }

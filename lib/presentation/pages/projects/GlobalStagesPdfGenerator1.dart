@@ -1,7 +1,7 @@
 import 'dart:io' as io;
-import 'package:app_bhb/data/auth/models/materials_model.dart';
-import 'package:app_bhb/domain/auth/usecases/materials_usecases.dart';
-import 'package:flutter/widgets.dart';
+import 'package:app_bhb/common_widget/pd_tfheme_manager.dart';
+import 'package:app_bhb/data/auth/models/tasks_model.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_tasks.dart';
 import 'package:intl/intl.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
@@ -15,63 +15,39 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../../../service_locator.dart';
 
-class GlobalMaterialsPdfGenerator {
+class GlobalStagesPdfGenerator1 {
   final String projectId;
+  final List<Map<String, dynamic>> stages;
+  List<Tasks> allTasks = [];
 
-  GlobalMaterialsPdfGenerator({
+  GlobalStagesPdfGenerator1({
     required this.projectId,
+    required this.stages,
   });
-
   Project? projectDetails;
 
   final GetProjectUseCase _projectUseCase = sl<GetProjectUseCase>();
-  final GetMaterialsByProjectIdUseCase _materialsUseCase =
-  sl<GetMaterialsByProjectIdUseCase>();
-
-  List<Materials> projectMaterials = [];
-
   Future<void> generate(BuildContext context) async {
-    final arabicFont = pw.Font.ttf(
-      await rootBundle.load("assets/font/NotoSansArabic-Regular.ttf"),
-    );
-    final emojiFont = pw.Font.ttf(
-      await rootBundle.load("assets/font/NotoEmoji-Regular.ttf"),
-    );
-
-    final materialsResult =
-    await _materialsUseCase.call(params: projectId);
-
-    materialsResult.fold(
-          (failure) {
-        CustomSnackBar.show(
-          context,
-          message: "❌ فشل في تحميل مواد المشروع",
-          type: SnackBarType.error,
-        );
-      },
-          (materials) {
-        projectMaterials = materials as List<Materials>;
-      },
-    );
-
     CustomSnackBar.show(
       context,
       message: " جاري إنشاء ملف PDF...",
       type: SnackBarType.loading,
       duration: const Duration(seconds: 300),
     );
+    await Future.delayed(const Duration(milliseconds: 100));
 
-    final pdf = pw.Document();
-
-    /// 🔹 صور ثابتة
+    final arabicFont = pw.Font.ttf(
+      await rootBundle.load("assets/font/NotoSansArabic-Regular.ttf"),
+    );
+    final emojiFont = pw.Font.ttf(
+      await rootBundle.load("assets/font/NotoEmoji-Regular.ttf"),
+    );
     final logo = await imageFromAssetBundle('assets/img/app_logo.png');
     final fbEmoji = await imageFromAssetBundle("assets/img/fb.png");
     final googleEmoji = await imageFromAssetBundle('assets/img/google.png');
     final inEmoji = await imageFromAssetBundle('assets/img/in.png');
-
     /// 🔹 جلب المشروع
     final projectResult = await _projectUseCase.call();
     projectResult.fold(
@@ -90,6 +66,7 @@ class GlobalMaterialsPdfGenerator {
         );
       },
     );
+
     if (projectDetails == null || projectDetails!.id == null) {
       CustomSnackBar.show(
         context,
@@ -98,8 +75,28 @@ class GlobalMaterialsPdfGenerator {
       );
       return;
     }
-    final Map<String, pw.ImageProvider> materialImages = {};
+    /// 🔹 Init theme
+    final theme = await PdfThemeManager.init();
 
+    /// 🔹 Charger tâches
+    final taskResult = await sl<GetTaskUseCase>().call();
+    taskResult.fold((_) {}, (list) {
+      allTasks = list as List<Tasks>;
+    });
+
+    final pdf = pw.Document();
+    String mapFloorIdToLabel(String? id) {
+      switch (id) {
+        case 'ground': return ' الدور الأرضي';
+        case 'floor_1': return ' الدور الأول';
+        case 'floor_2': return ' الدور الثاني';
+        case 'floor_3': return ' الدور الثالث';
+        case 'floor_4': return ' الدور الرابع';
+        case 'floor_5': return ' الدور الخامس';
+        case 'roof': return ' السطح';
+        default: return '-';
+      }
+    }
 
 
     pdf.addPage(
@@ -203,7 +200,7 @@ class GlobalMaterialsPdfGenerator {
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.Text(
-                  "تقرير طلبات المواد للمشروع",
+                  "تقرير العام لمراحل المشروع",
                   style: pw.TextStyle(
                     font: arabicFont,
                     fontFallback: [emojiFont],
@@ -300,7 +297,7 @@ class GlobalMaterialsPdfGenerator {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    buildInfoBox( "جميع طلبات المواد الخاصة بالمشروع موجودة في الصفحات اللاحقة.⬇️⬇️⬇️", "طلبات المواد المشروع", "Project Material Requests", arabicFont, emojiFont, icon: "📋",),
+                    buildInfoBox( "جميع المراحل  الخاصة بالمشروع موجودة في الصفحات اللاحقة.⬇️⬇️⬇️", "مراحل  المشروع", "Project  Phases", arabicFont, emojiFont, icon: "📋",),
                     pw.SizedBox(width: 8),
                   ],
                 ),
@@ -309,35 +306,254 @@ class GlobalMaterialsPdfGenerator {
             ),
             pw.SizedBox(height: 20),
           ],
-          pw.SizedBox(height: 55),
-          pw.SizedBox(height: 20),
-          pw.SizedBox(height: 20),
-
-          if (projectMaterials.isEmpty)
-            pw.Text(
-              "لا توجد مواد مضافة لهذا المشروع",
-              style: pw.TextStyle(
-                font: arabicFont,
-                fontSize: 12,
-                color: PdfColors.grey,
-              ),
-              textDirection: pw.TextDirection.rtl,
-            )
-          else
-            ...projectMaterials.map((m) {
-              final img = materialImages[m.id ?? m.stage ?? ''];
-              return buildMaterialCard(m, arabicFont, emojiFont, img);
-            }).toList(),
-          buildFinalWarning(arabicFont, emojiFont),
-
+          pw.SizedBox(height: 15),
         ],
       ),
     );
+
+    for (final stage in stages) {
+      final stageStatus = stage['status'] ?? 'en cours';
+      if (stageStatus != 'terminé') continue;
+
+      final stageName = stage['name'] ?? '-';
+      final subPhases = stage['subPhases'] as List<dynamic>;
+
+      final List<pw.Widget> content = [];
+
+      // ─────────── Titre du stage ───────────
+      content.add(
+        pw.Container(
+          width: double.infinity,
+          alignment: pw.Alignment.center,
+          margin: const pw.EdgeInsets.symmetric(vertical: 8),
+          child: theme.arabicText(
+            "مرحلة: $stageName",
+            size: 18,
+            weight: pw.FontWeight.bold,
+            align: pw.TextAlign.center,
+            color: PdfThemeManager.primary,
+          ),
+        ),
+      );
+
+      content.add(pw.SizedBox(height: 8));
+
+      // ─────────── Boucle sur les sub-phases et tâches ───────────
+      for (final sub in subPhases) {
+        final subId = sub['id']?.toString().trim();
+        final subName = sub['name'] ?? '-';
+
+        final tasksForSub = allTasks
+            .where((t) => t.projectId == projectId && t.subStageId?.trim() == subId)
+            .toList();
+
+        content.add(theme.sectionHeader(subName));
+
+        for (final task in tasksForSub) {
+          final hasImages = (task.imagesBefore?.isNotEmpty ?? false) ||
+              (task.imagesAfter?.isNotEmpty ?? false);
+
+          final isCeilingStage = // ton code existant pour détecter les sous-stages de plafond
+          task.subStageId == 'sub_08_01' || task.subStageId == 'sub_08_02' ||
+              task.subStageId == 'sub_08_03' || task.subStageId == 'sub_08_04' ||
+              task.subStageId == 'sub_08_05' || task.subStageId == 'sub_09_01' ||
+              task.subStageId == 'sub_09_02' || task.subStageId == 'sub_09_03' ||
+              task.subStageId == 'sub_09_04' || task.subStageId == 'sub_10_01' ||
+              task.subStageId == 'sub_10_02' || task.subStageId == 'sub_10_03' ||
+              task.subStageId == 'sub_10_04' || task.subStageId == 'sub_10_05' ||
+              task.subStageId == 'sub_10_06';
+
+          content.add(
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(12),
+              margin: const pw.EdgeInsets.symmetric(vertical: 6),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(4),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  theme.arabicText(
+                    "📝 ملاحظات: ${task.notes ?? "-"}",
+                    size: 12,
+                    weight: pw.FontWeight.bold,
+                  ),
+                  if (isCeilingStage && task.floorId != null) ...[
+                    pw.SizedBox(height: 4),
+                    theme.arabicText(
+                      "🏢 الطابق: ${mapFloorIdToLabel(task.floorId)}",
+                      size: 12,
+                      weight: pw.FontWeight.bold,
+                    )
+                  ],
+                  if (hasImages) ...[
+                    pw.SizedBox(height: 8),
+                    pw.UrlLink(
+                      destination:
+                      "https://bhbgroup-ed1bc.web.app/task-images.html?subStageId=${task.subStageId}&projectId=${task.projectId}",
+                      child: theme.arabicText(
+                        "📸 عرض جميع صور المهمة",
+                        size: 12,
+                        weight: pw.FontWeight.bold,
+                        color: PdfColors.blue,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+      }
+
+      // ─────────── Paragraphe final (après toutes les sub-stages/tâches) ───────────
+      content.add(pw.SizedBox(height: 20));
+
+      content.add(
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#FDE2E2'), // fond rouge clair
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+            border: pw.Border.all(color: PdfColor.fromHex('#D32F2F'), width: 1), // bordure rouge foncé
+          ),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Expanded(
+                child: pw.Text(
+                  "  يُعتبر هذا التقرير نهائيًا ومعتمدًا تلقائيًا بعد مرور 48 ساعة من تاريخ إرساله، ما لم يُقدَّم اعتراض خطي ومعتمد خلال هذه الفترة. ",
+                  style: pw.TextStyle(
+                    font: arabicFont,
+                    fontFallback: [emojiFont],
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex('#B71C1C'),
+                  ),
+                  textAlign: pw.TextAlign.center,
+                  textDirection: pw.TextDirection.rtl,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      content.add(pw.SizedBox(height: 20));
+
+      // ─────────── Ajouter la page pour ce stage ───────────
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+          header: (context) => pw.Column(
+            children: [
+              pw.Container(
+                height: 5,
+                width: double.infinity,
+                decoration: pw.BoxDecoration(
+                  gradient: pw.LinearGradient(
+                    colors: [
+                      PdfColor.fromHex('#FFD700'),
+                      PdfColor.fromHex('#022C43'),
+                    ],
+                  ),
+                ),
+              ),
+              pw.SizedBox(height:5),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    ' ${DateFormat('dd/MM/yyyy').format(DateTime.now())}    🕓  ',
+                    style: pw.TextStyle(
+                      font: arabicFont,
+                      fontFallback: [emojiFont],
+                      fontSize: 11,
+                      color: PdfColors.grey700,
+                    ),
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                  pw.Image(logo, width: 80),
+                ],
+              ),
+            ],
+          ),
+          footer: (context) => pw.Container(
+            margin: const pw.EdgeInsets.only(top: 13),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                pw.Divider(color: PdfColors.grey400),
+                pw.SizedBox(height:5),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      "+966545388835    ☎",
+                      style: pw.TextStyle(
+                        font: arabicFont,
+                        fontFallback: [emojiFont],
+                        fontSize: 12,
+                        color: PdfColors.grey700,
+                      ),
+                      textDirection: pw.TextDirection.rtl,
+                    ),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Image(fbEmoji, width: 14, height: 14),
+                        pw.SizedBox(width: 4),
+                        pw.Image(googleEmoji, width: 14, height: 14),
+                        pw.SizedBox(width: 4),
+                        pw.Image(inEmoji, width: 14, height: 14),
+                        pw.SizedBox(width: 12),
+                        pw.Text(
+                          "BHB_Group",
+                          style: pw.TextStyle(
+                            font: arabicFont,
+                            fontFallback: [emojiFont],
+                            fontSize: 9,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                        pw.SizedBox(width: 12),
+                        pw.Text(
+                          "🌐 https://x.com/BHB_Group",
+                          style: pw.TextStyle(
+                            font: arabicFont,
+                            fontFallback: [emojiFont],
+                            fontSize: 10,
+                            color: PdfColors.blue700,
+                            decoration: pw.TextDecoration.underline,
+                          ),
+                        ),
+                        pw.SizedBox(width: 4),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          build: (_) => content,
+        ),
+      );
+    }
+
+
     final bytes = await pdf.save();
+
+    // 🔹 4️⃣ مشاركة PDF
     if (kIsWeb) {
       await Printing.sharePdf(
         bytes: bytes,
-        filename: 'تقرير_طلبات_المواد_للمشروع.pdf',
+        filename: 'تقرير_العام_لمراحل _المشروع.pdf',
       );
 
       CustomSnackBar.show(
@@ -347,18 +563,16 @@ class GlobalMaterialsPdfGenerator {
       );
     } else {
       final dir = await getTemporaryDirectory();
-      final file = io.File('${dir.path}/تقرير_طلبات_المواد_للمشروع.pdf');
+      final file = io.File('${dir.path}/تقرير_العام_لمراحل _المشروع.pdf');
       await file.writeAsBytes(bytes);
 
       final phone = projectDetails!.phoneNumber ?? "";
       final sanitizedPhone = phone.replaceAll("+", "").trim();
-
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: "👋 مرحبا، هذا تقرير طلبات المواد للمشروع.",
-        subject: "تقرير طلبات المواد للمشروع",
+        text: "👋 مرحبا، هذا تقرير العام لمراحل  المشروع.",
+        subject: "تقرير العام لمراحل  المشروع",
       );
-
       if (sanitizedPhone.isNotEmpty) {
         final whatsappUrl = "https://wa.me/$sanitizedPhone";
         await launchUrl(
@@ -375,54 +589,9 @@ class GlobalMaterialsPdfGenerator {
     }
   }
 }
-pw.Widget buildFinalWarning(pw.Font arabicFont, pw.Font emojiFont) {
-  return pw.Column(
-    children: [
-      pw.SizedBox(height: 20),
-      pw.Container(
-        width: double.infinity,
-        padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        decoration: pw.BoxDecoration(
-          color: PdfColor.fromHex('#FDE2E2'),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-          border: pw.Border.all(color: PdfColor.fromHex('#D32F2F'), width: 1),
-        ),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          mainAxisAlignment: pw.MainAxisAlignment.center,
-          children: [
-            pw.Text(
-              "⚠️",
-              style: pw.TextStyle(
-                font: emojiFont,
-                fontSize: 16,
-              ),
-            ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              child: pw.Text(
-                "ُعتبر هذا التقرير نهائيًا ومعتمدًا تلقائيًا بعد مرور (48) ساعة من تاريخ إرساله ما لم يَرِد اعتراض خطي معتمد.",
-                style: pw.TextStyle(
-                  font: arabicFont,
-                  fontFallback: [emojiFont],
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColor.fromHex('#B71C1C'),
-                ),
-                textAlign: pw.TextAlign.center,
-                textDirection: pw.TextDirection.rtl,
-              ),
-            ),
-          ],
-        ),
-      ),
-      pw.SizedBox(height: 20),
-    ],
-  );
-}
-
 pw.Expanded buildInfoBox(String value, String titleAr, String titleEn, pw.Font arabicFont, pw.Font emojiFont, {String? icon, bool isAlternate = false,}) {
   final PdfColor primaryColor = isAlternate ? PdfColor.fromHex('#B8860B') : PdfColor.fromHex('#21206C');
+  final PdfColor secondaryColor = PdfColor.fromHex('#E9EEF3');
   final PdfColor textColor = PdfColor.fromHex('#333333');
 
   return pw.Expanded(
@@ -528,146 +697,4 @@ pw.Expanded buildInfoBox(String value, String titleAr, String titleEn, pw.Font a
   );
 }
 
-pw.Widget buildMaterialCard(
-    Materials material,
-    pw.Font arabicFont,
-    pw.Font emojiFont,
-    pw.ImageProvider? image, {
-      bool isAlternate = false,
-    }) {
-  final PdfColor primaryColor =
-  isAlternate ? PdfColor.fromHex('#B8860B') : PdfColor.fromHex('#21206C');
 
-  return pw.Container(
-    margin: const pw.EdgeInsets.symmetric(vertical: 8),
-    decoration: pw.BoxDecoration(
-      color: PdfColors.white,
-      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-      border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
-      boxShadow: [
-        pw.BoxShadow(
-          color: PdfColors.grey300,
-          blurRadius: 1.5,
-          spreadRadius: 0.3,
-        ),
-      ],
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-
-        /// 🔷 HEADER (RTL)
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-          decoration: pw.BoxDecoration(
-            gradient: pw.LinearGradient(
-              colors: isAlternate
-                  ? [primaryColor, PdfColor.fromHex('#E6C200')]
-                  : [primaryColor, PdfColor.fromHex('#1E6091')],
-            ),
-            borderRadius: const pw.BorderRadius.only(
-              topLeft: pw.Radius.circular(6),
-              topRight: pw.Radius.circular(6),
-            ),
-          ),
-          child:
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Text(
-                "📦",
-                style: pw.TextStyle(
-                  font: emojiFont,
-                  fontSize: 14,
-                  color: PdfColors.white,
-                ),
-              ),
-              pw.SizedBox(width: 6),
-              pw.Flexible(
-                child: pw.Text(
-                  material.stage ?? "-",
-                  style: pw.TextStyle(
-                    font: arabicFont,
-                    fontFallback: [emojiFont],
-                    fontSize: 11.5,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                  textDirection: pw.TextDirection.rtl,
-                ),
-              ),
-            ],
-          ),
-
-        ),
-
-        /// 📄 BODY (RTL)
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-          alignment: pw.Alignment.centerRight,
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-
-              /// 📏 Unit (RTL)
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Text(
-                    material.unit ?? "-",
-                    style: pw.TextStyle(
-                      font: arabicFont,
-                      fontSize: 11,
-                      color: PdfColor.fromHex('#333333'),
-                    ),
-                    textDirection: pw.TextDirection.rtl,
-                    textAlign: pw.TextAlign.right,
-                  ),
-                  pw.SizedBox(width: 4),
-                  pw.Text(
-                    "الوحدة:",
-                    style: pw.TextStyle(
-                      font: arabicFont,
-                      fontSize: 11,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColor.fromHex('#333333'),
-                    ),
-                    textDirection: pw.TextDirection.rtl,
-                  ),
-                  pw.SizedBox(width: 4),
-                  pw.Text(
-                    "📐",
-                    style: pw.TextStyle(font: emojiFont, fontSize: 11),
-                  ),
-                ],
-              ),
-
-              /// 🖼 IMAGE (à droite)
-              if (image != null) ...[
-                pw.SizedBox(height: 8),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.ClipRRect(
-                    horizontalRadius: 6,
-                    verticalRadius: 6,
-                    child: pw.Container(
-                      width: 100,
-                      height: 100,
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(color: PdfColors.grey300),
-                      ),
-                      child: pw.Image(image, fit: pw.BoxFit.cover),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}

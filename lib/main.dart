@@ -1,4 +1,5 @@
 import 'package:app_bhb/common/color_extension.dart';
+import 'package:app_bhb/common_widget/app_keys.dart';
 import 'package:app_bhb/firebase_options.dart';
 import 'package:app_bhb/presentation/pages/login/splashScreen.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_bhb/presentation/bloc/roles_display.dart';
 import 'package:app_bhb/service_locator.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 
 Future<void> main() async {
 
@@ -35,6 +37,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
+        scaffoldMessengerKey: scaffoldMessengerKey,
         debugShowCheckedModeBanner: false,
         title: 'BHB',
         theme: ThemeData(

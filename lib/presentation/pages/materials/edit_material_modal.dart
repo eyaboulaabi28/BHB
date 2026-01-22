@@ -1,62 +1,39 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:app_bhb/common/color_extension.dart';
+import 'package:app_bhb/common_widget/generic_form_modal.dart';
 import 'package:app_bhb/data/auth/models/engineers_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as path;
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:app_bhb/common/color_extension.dart';
-import 'package:app_bhb/common_widget/CustomSnackBar.dart';
+
 import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/materials_model.dart';
 import 'package:app_bhb/domain/auth/usecases/materials_usecases.dart';
 import '../../../service_locator.dart';
 
-class FormFieldConfig {
-  final String key;
-  final String hint;
-  final Widget? icon;
-  final bool isPassword;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validator;
-  final List<String>? options;
-
-  FormFieldConfig({
-    required this.key,
-    required this.hint,
-    this.icon,
-    this.isPassword = false,
-    this.keyboardType,
-    this.validator,
-    this.options,
-  });
-}
-
-class AddMateriaModal extends StatefulWidget {
-  final Function(Map<String, String> values) onAdd;
+class EditMateriaModal extends StatefulWidget {
+  final Materials material;
+  final Function(Map<String, String>) onEdit;
   final String title;
   final String submitButtonText;
-  final String projectId;
 
-  const AddMateriaModal({
+  const EditMateriaModal({
     super.key,
-    required this.onAdd,
-    this.title = "إضافة مادة جديدة",
-    this.submitButtonText = "إضافة",
-    required this.projectId,
+    required this.material,
+    required this.onEdit,
+    this.title = "تعديل المادة",
+    this.submitButtonText = "حفظ",
   });
 
   @override
-  State<AddMateriaModal> createState() => _AddMateriaModalState();
+  State<EditMateriaModal> createState() => _EditMateriaModalState();
 }
 
-class _AddMateriaModalState extends State<AddMateriaModal> {
+class _EditMateriaModalState extends State<EditMateriaModal> {
   final _formKey = GlobalKey<FormState>();
   late final CreateNotificationUseCase _createNotificationUseCase;
   late final List<FormFieldConfig> fields;
@@ -66,7 +43,6 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
   List<Engineer> engineers = [];
   late final TextEditingController engineerCtrl;
   String? selectedEngineerId;
-  String? imageUrl;
 
   @override
   void initState() {
@@ -76,6 +52,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
 
     engineerCtrl = TextEditingController();
 
+    // Champs dynamiques comme AddMateriaModal
     fields = [
       FormFieldConfig(
         key: "stage",
@@ -94,15 +71,44 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
       ),
     ];
 
-    _controllers = {for (var f in fields) f.key: TextEditingController()};
+    // Initialisation des controllers avec les valeurs existantes
+    _controllers = {
+      for (var f in fields)
+        f.key: TextEditingController(
+            text: _getFieldValue(widget.material, f.key) ?? "")
+    };
     _obscureMap = {for (var f in fields) f.key: f.isPassword};
+
+    // Engineer
+    selectedEngineerId = widget.material.engineerId;
+  }
+
+  String? _getFieldValue(Materials material, String key) {
+    switch (key) {
+      case "stage":
+        return material.stage;
+      case "unit":
+        return material.unit;
+      case "description":
+        return material.description;
+    }
+    return null;
   }
 
   Future<void> _loadEngineers() async {
     final result = await sl<GetEngineersUseCase>().call();
     result.fold(
           (e) => debugPrint("Error engineers: $e"),
-          (list) => setState(() => engineers = List<Engineer>.from(list)),
+          (list) {
+        setState(() {
+          engineers = List<Engineer>.from(list);
+          // Initialiser engineerCtrl avec le nom actuel
+          final currentEng = engineers.firstWhere(
+                  (e) => e.id == selectedEngineerId,
+              orElse: () => Engineer(id: "", firstName: ""));
+          engineerCtrl.text = currentEng.firstName ?? "";
+        });
+      },
     );
   }
 
@@ -148,14 +154,15 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                       fontSize: 20,
                     )),
                 const SizedBox(height: 20),
-             // Sélecteur ingénieur
+
+                // Sélecteur ingénieur
                 Padding(
                   padding: const EdgeInsets.only(bottom: 15),
                   child: NewRoundSelectField(
                     hintText: "اختيار المهندس",
                     options: engineers.map((e) => e.firstName ?? "").toList(),
                     controller: engineerCtrl,
-                    enableSearch:true,
+                    enableSearch: true,
                     rightIcon: const Icon(Icons.engineering),
                     onChanged: (value) {
                       final engineer =
@@ -164,11 +171,15 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                     },
                   ),
                 ),
-                 // Champs dynamiques
-                ...fields.map((field) {
-                  if (field.key == "description") return Padding(padding: const EdgeInsets.only(bottom: 15), child: _buildParagraphField(field));
 
-                  // Si le champ a des options → SelectField
+                // Champs dynamiques
+                ...fields.map((field) {
+                  if (field.key == "description") {
+                    return Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: _buildParagraphField(field));
+                  }
+
                   if (field.options != null && field.options!.isNotEmpty) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 15),
@@ -178,16 +189,14 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                         controller: _controllers[field.key],
                         validator: field.validator,
                         rightIcon: field.icon,
-                        enableSearch: true, // si tu veux la recherche
+                        enableSearch: true,
                         onChanged: (value) {
-                          // Assure que le controller contient bien la valeur choisie
                           _controllers[field.key]!.text = value ?? "";
                         },
                       ),
                     );
                   }
 
-                  // Sinon → TextField classique
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 15),
                     child: NewRoundTextField(
@@ -200,9 +209,6 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                     ),
                   );
                 }),
-
-
-
 
                 const SizedBox(height: 20),
 
@@ -217,9 +223,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 15),
                         ),
-                        onPressed: () {
-                          if (mounted) Navigator.pop(context);
-                        },
+                        onPressed: () => Navigator.pop(context),
                         child: Text(
                           "إلغاء",
                           style: TextStyle(
@@ -243,75 +247,32 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                         ),
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
-                            try {
-                              final material = Materials(
-                                stage: _controllers["stage"]!.text.trim(),
-                                unit: _controllers["unit"]!.text.trim(),
-                                description: _controllers["description"]!.text.trim(),
-                                engineerId: selectedEngineerId,
-                                projectId: widget.projectId,
-                              );
+                            final updatedMaterial = Materials(
+                              id: widget.material.id,
+                              stage: _controllers["stage"]!.text.trim(),
+                              unit: _controllers["unit"]!.text.trim(),
+                              description: _controllers["description"]!.text.trim(),
+                              engineerId: selectedEngineerId,
+                              projectId: widget.material.projectId,
+                            );
 
-                              final addMaterialUseCase =
-                              sl<AddMaterialUseCase>();
-                              final result =
-                              await addMaterialUseCase.call(params: material);
+                            // Retourner les valeurs modifiées au parent
+                            widget.onEdit({
+                              "id": updatedMaterial.id ?? "",
+                              "stage": updatedMaterial.stage ?? "",
+                              "unit": updatedMaterial.unit ?? "",
+                              "description": updatedMaterial.description ?? "",
+                              "engineerId": updatedMaterial.engineerId ?? "",
+                            });
 
-                              if (!mounted) return;
+                            _sendNotification(
+                              title: "تعديل مادة",
+                              message:
+                              "تم تعديل المادة: ${updatedMaterial.stage}, ${updatedMaterial.description}",
+                              userId: updatedMaterial.id,
+                            );
 
-                              result.fold(
-                                    (failure) {
-                                  CustomSnackBar.show(
-                                    context,
-                                    message: "حدث خطأ أثناء إضافة المادة.",
-                                    type: SnackBarType.error,
-                                  );
-                                },
-                                    (id) {
-                                  final newMaterial = Materials(
-                                    id: id,
-                                    stage: material.stage,
-                                    unit: material.unit,
-                                    description: material.description,
-                                    engineerId: material.engineerId,
-                                    projectId: material.projectId,
-                                  );
-
-                                  CustomSnackBar.show(
-                                    context,
-                                    message: "تمت إضافة المادة بنجاح ✅",
-                                    type: SnackBarType.success,
-                                  );
-
-                                  _sendNotification(
-                                    title: "مادة جديدة",
-                                    message: "تم إضافة مادة جديدة: المرحلة: ${newMaterial.stage}, الوصف: ${newMaterial.description}",
-                                    userId: id,
-                                    route: null,
-                                  );
-
-
-                                  widget.onAdd({
-                                    "id": newMaterial.id ?? "",
-                                    "stage": newMaterial.stage ?? "",
-                                    "unit": newMaterial.unit ?? "",
-                                    "description": newMaterial.description ?? "",
-                                    "engineerId": newMaterial.engineerId ?? "",
-                                  });
-
-                                  Navigator.pop(context);
-                                },
-                              );
-                            } catch (e) {
-                              if (mounted) {
-                                CustomSnackBar.show(
-                                  context,
-                                  message:
-                                  "حدث خطأ غير متوقع: ${e.toString()}",
-                                  type: SnackBarType.error,
-                                );
-                              }
-                            }
+                            Navigator.pop(context);
                           }
                         },
                         child: Text(
@@ -326,7 +287,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -334,6 +295,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
       ),
     );
   }
+
   Widget _buildParagraphField(FormFieldConfig field) {
     return Container(
       height: 120,
@@ -371,7 +333,5 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
       ),
     );
   }
-
 }
-
 

@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
+import 'package:app_bhb/common_widget/app_keys.dart';
+import 'package:app_bhb/data/auth/models/notifications_model.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -12,16 +16,20 @@ import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/sub_stages_model.dart';
 
+import '../../../service_locator.dart';
+
 
 class AddTaskDialog extends StatefulWidget {
   final SubStage subStage;
   final VoidCallback? onTaskAdded;
   final String? projectId;
+  final String projectName;
   const AddTaskDialog({
     super.key,
     required this.subStage,
     required this.projectId,
     this.onTaskAdded,
+    required this.projectName,
   });
 
   @override
@@ -34,12 +42,16 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   String? selectedFloorId;
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _floorController = TextEditingController();
+  late final CreateNotificationUseCase _createNotificationUseCase;
+  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void dispose() {
     _floorController.dispose();
     _notesController.dispose();
     super.dispose();
+    _createNotificationUseCase = sl<CreateNotificationUseCase>();
+
   }
 
 
@@ -107,23 +119,32 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     if (pickedFiles.isNotEmpty) {
                       if (!mounted) return;
                       if (kIsWeb) {
-                        final bytesList = await Future.wait(pickedFiles.map((e) => e.readAsBytes()));
+                        final bytesList = await Future.wait(
+                          pickedFiles.map((e) => e.readAsBytes()),
+                        );
+
                         setState(() {
                           if (isBefore) {
-                            _imagesBeforeWeb = bytesList;
+                            _imagesBeforeWeb.addAll(bytesList);
                           } else {
-                            _imagesAfterWeb = bytesList;
-                          }
-                        });
-                      } else {
-                        setState(() {
-                          if (isBefore) {
-                            _imagesBefore = pickedFiles.map((e) => File(e.path)).toList();
-                          } else {
-                            _imagesAfter = pickedFiles.map((e) => File(e.path)).toList();
+                            _imagesAfterWeb.addAll(bytesList);
                           }
                         });
                       }
+                      else {
+                        setState(() {
+                          if (isBefore) {
+                            _imagesBefore.addAll(
+                              pickedFiles.map((e) => File(e.path)),
+                            );
+                          } else {
+                            _imagesAfter.addAll(
+                              pickedFiles.map((e) => File(e.path)),
+                            );
+                          }
+                        });
+                      }
+
                     }
                     Navigator.of(bottomSheetContext).pop();
                   },
@@ -243,40 +264,65 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   }
   bool _isSubmitting = false;
 
+
+  Future<void> _sendNotification({
+    required String title,
+    required String message,
+    String? userId,
+    String? route,
+  }) async {
+    final notif = NotificationsModel(
+      title: title,
+      message: message,
+      userId: userId,
+      route: route,
+      createdAt: DateTime.now(),
+      isRead: false,
+    );
+
+    await _createNotificationUseCase(notification: notif);
+  }
+
   Future<void> _submit() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
-
-
-    final parentContext = Navigator.of(context).context;
+    _isSubmitting = true;
     final notes = _notesController.text.trim();
-    Navigator.of(context).pop();
+
+    // ⬅️ احفظ Context قبل pop
+    final rootContext = context;
 
     CustomSnackBar.show(
-      parentContext,
-      message: "جاري رفع الصور... الرجاء الانتظار ⏳",
+      rootContext,
+      message: "جاري رفع الصور... الرجاء الانتظار",
       type: SnackBarType.loading,
       duration: const Duration(days: 1),
     );
 
+    // ⬅️ اغلق الـ BottomSheet
+    Navigator.pop(rootContext);
+
     try {
       List<String> urlsBefore = [];
-      for (int i = 0; i < (kIsWeb ? _imagesBeforeWeb.length : _imagesBefore.length); i++) {
+      for (int i = 0;
+      i < (kIsWeb ? _imagesBeforeWeb.length : _imagesBefore.length);
+      i++) {
         final compressed = kIsWeb
             ? await compressWeb(_imagesBeforeWeb[i])
             : await compressMobile(_imagesBefore[i]);
+
         urlsBefore.add(await _uploadFile(bytes: compressed));
       }
 
       List<String> urlsAfter = [];
-      for (int i = 0; i < (kIsWeb ? _imagesAfterWeb.length : _imagesAfter.length); i++) {
+      for (int i = 0;
+      i < (kIsWeb ? _imagesAfterWeb.length : _imagesAfter.length);
+      i++) {
         final compressed = kIsWeb
             ? await compressWeb(_imagesAfterWeb[i])
             : await compressMobile(_imagesAfter[i]);
+
         urlsAfter.add(await _uploadFile(bytes: compressed));
       }
 
@@ -290,21 +336,26 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         'floorId': selectedFloorId,
       });
 
-      ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
-
       CustomSnackBar.show(
-        parentContext,
-        message: "تمت إضافة المهمة بنجاح ✅",
+        rootContext,
+        message: "تمت إضافة المهمة بنجاح",
         type: SnackBarType.success,
       );
-
+      final notifMessage = "تمت إضافة مهمة جديدة\n"
+          "المشروع: ${widget.projectName}\n"
+          "المرحلة: ${widget.subStage.stageId}\n"
+          "المهمة الفرعية: ${widget.subStage.subStageName}";
+      await _sendNotification(
+        title: "مهمة جديدة",
+        message: notifMessage,
+        userId: currentUserId,
+        route: "/home",
+      );
       widget.onTaskAdded?.call();
 
     } catch (e) {
-      ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
-
       CustomSnackBar.show(
-        parentContext,
+        rootContext,
         message: "حدث خطأ أثناء رفع الصور",
         type: SnackBarType.error,
       );
@@ -312,6 +363,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _isSubmitting = false;
     }
   }
+
+
+
+
+
+
   String? _mapFloorLabelToId(String? label) {
     switch (label) {
       case 'الدور الأرضي':

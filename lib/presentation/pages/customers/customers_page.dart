@@ -22,8 +22,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class CustomersPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const CustomersPage({super.key, required this.selectedType});
+  const CustomersPage({super.key, required this.selectedType, required this.projectName
+  });
 
 
   @override
@@ -419,6 +421,7 @@ class _CustomersPageState extends State<CustomersPage> {
                                     double? selectedLng = customer.longitude;
 
                                     showModalBottomSheet(
+                                      useRootNavigator: true,
                                       context: context,
                                       isScrollControlled: true,
                                       backgroundColor: Colors.transparent,
@@ -558,6 +561,7 @@ class _CustomersPageState extends State<CustomersPage> {
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
               builder: (context) => AddCustomerModal(
+                parentContext: context,
                 title: "إضافة عميل جديد",
                 submitButtonText: "إضافة",
                 onAdd: (values) {
@@ -588,7 +592,7 @@ class _CustomersPageState extends State<CustomersPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
-
+          projectName: widget.projectName,
         ),
       ),
     );

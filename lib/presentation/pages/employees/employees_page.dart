@@ -23,8 +23,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class EmployeesPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const EmployeesPage({super.key, required this.selectedType});
+  const EmployeesPage({super.key, required this.selectedType,    required this.projectName
+  });
 
   @override
   State<EmployeesPage> createState() => _EmployeesPageState();
@@ -559,6 +561,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
         ),
       ),
     );

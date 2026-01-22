@@ -12,18 +12,20 @@ import 'package:flutter/material.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart' as generic_modal;
 import 'package:printing/printing.dart';
 import '../../../service_locator.dart';
-import 'dart:io' as io;                 // io.File
-import 'package:flutter/foundation.dart'; // kIsWeb
-import 'package:path_provider/path_provider.dart'; // getTemporaryDirectory
-import 'package:share_plus/share_plus.dart'; // Share + XFile
-import 'package:url_launcher/url_launcher.dart'; // launchUrl
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 
 
 class MeetingPage extends StatefulWidget {
   final String selectedType;
+  final String projectName;
 
-  const MeetingPage({super.key, required this.selectedType});
+  const MeetingPage({super.key, required this.selectedType,required this.projectName
+  });
 
   @override
   State<MeetingPage> createState() => _MeetingPageState();
@@ -211,11 +213,11 @@ class _MeetingPageState extends State<MeetingPage> {
         .doc(currentUserId)
         .get();
     if (snapshot.exists) {
-      final data = snapshot.data(); // <-- récupère le MAP
+      final data = snapshot.data();
       print("User data: $data");
 
       setState(() {
-        userRole = data?["role"] ?? "";  // <-- CORRECT
+        userRole = data?["role"] ?? "";
       });
     }
 
@@ -360,174 +362,17 @@ class _MeetingPageState extends State<MeetingPage> {
                   ),
                 ),
               )
-                  : ListView.builder(
+                  :
+              ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: filteredMeetings.length,
                 itemBuilder: (context, index) {
                   final meeting = filteredMeetings[index];
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        textDirection: TextDirection.rtl,
-                        children: [
-                          // Icon type meeting
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: meeting.type == "مع العميل"
-                                ? Colors.green.withOpacity(0.2)
-                                : Colors.blue.withOpacity(0.2),
-                            child: Icon(
-                              meeting.type == "مع العميل" ? Icons.person : Icons.groups,
-                              color: TColor.primary,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  meeting.titleMeeting ?? "",
-                                  style: const TextStyle(
-                                    fontFamily: 'Tajawal',
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                    children: [
-                                      const Icon(Icons.description, size: 18, color: Colors.grey),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        meeting.description ?? "",
-                                        style: const TextStyle(
-                                          fontFamily: 'Tajawal',
-                                          fontSize: 15,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ]
-                                ),
-                                const SizedBox(height: 10),
-                                // Chaque champ avec icône
-                                Row(
-                                  children: [
-                                    const Icon(Icons.category, size: 18, color: Colors.grey),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "نوع الاجتماع: ${meeting.type ?? "-"}",
-                                      style: const TextStyle(
-                                        fontFamily: 'Tajawal',
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.engineering, size: 18, color: Colors.grey),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "مهندس: ${meeting.nameEngineer ?? "-"}",
-                                      style: const TextStyle(
-                                        fontFamily: 'Tajawal',
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.account_circle, size: 18, color: Colors.grey),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "موظف: ${meeting.nameEmployee ?? "-"}",
-                                      style: const TextStyle(
-                                        fontFamily: 'Tajawal',
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.person, size: 18, color: Colors.grey),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "عميل: ${meeting.nameCustomer ?? "-"}",
-                                      style: const TextStyle(
-                                        fontFamily: 'Tajawal',
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "📅 ${meeting.dateMeeting?.toLocal().toString().split(' ')[0] ?? ''}",
-                                      style: const TextStyle(
-                                        fontFamily: 'Tajawal',
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Voir détails
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 👁️ عرض التفاصيل
-                              IconButton(
-                                tooltip: "عرض التفاصيل",
-                                icon: const Icon(Icons.visibility, color: Colors.blue),
-                                onPressed: () => _openMeetingDetails(meeting),
-                              ),
-
-                              // 📄 توليد PDF
-                              IconButton(
-                                tooltip: "توليد PDF",
-                                icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                                onPressed: () => _generateMeetingPdf(meeting),
-                              ),
-                            ],
-                          ),
-
-                        ],
-                      ),
-                    ),
-                  );
+                  return _buildMeetingCard(context, meeting);
                 },
               ),
+
+
             )
           ],
         ),
@@ -540,6 +385,8 @@ class _MeetingPageState extends State<MeetingPage> {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
+              isDismissible: false,
+              enableDrag: false,
               backgroundColor: Colors.transparent,
               builder: (context) => AddMeetingModal(
                 title: "إضافة محضر جديد",
@@ -557,7 +404,7 @@ class _MeetingPageState extends State<MeetingPage> {
                         uidEmployee: values["uidEmployee"] ,
                         nameCustomer: values["nameCustomer"] ,
                         uidCustomer: values["uidCustomer"] ,
-                        imageUrl:values["imageUrl"],
+                        imageUrls:values["imageUrls"],
                         signatureUrl: values["signatureUrl"],
                         customerPhone: values['customerPhone'],
 
@@ -579,6 +426,7 @@ class _MeetingPageState extends State<MeetingPage> {
           selectedIndex: _selectedIndex,
           onTap: _onBottomNavTapped,
           selectedType: widget.selectedType,
+          projectName: widget.projectName,
 
         ),
       ),
@@ -591,22 +439,30 @@ class _MeetingPageState extends State<MeetingPage> {
         key: "titleMeeting",
         hint: "عنوان الاجتماع",
         icon: const Icon(Icons.title, color: Colors.grey),
+        isParagraph: true,
       ),
       generic_modal.FormFieldConfig(
         key: "description",
         hint: "تفاصيل الاجتماع",
         icon: const Icon(Icons.description, color: Colors.grey),
+        maxLines: null, // null = s'adapte au contenu
+        minLines: 5,
+        isParagraph: true,
+
       ),
       generic_modal.FormFieldConfig(
         key: "type",
         hint: "نوع الاجتماع",
+        maxLines: 5,
         icon: const Icon(Icons.category, color: Colors.grey),
         options: ["مع العميل", "مع الموظفين"],
+        isParagraph: true,
       ),
       generic_modal.FormFieldConfig(
         key: "nameEngineer",
         hint: "المهندس",
         icon: const Icon(Icons.engineering, color: Colors.grey),
+
       ),
       generic_modal.FormFieldConfig(
         key: "nameEmployee",
@@ -616,8 +472,10 @@ class _MeetingPageState extends State<MeetingPage> {
       generic_modal.FormFieldConfig(
         key: "nameCustomer",
         hint: "العميل",
+        maxLines: 2,
         icon: const Icon(Icons.person, color: Colors.grey),
       ),
+
     ];
 
     // Valeurs initiales
@@ -660,14 +518,14 @@ class _MeetingPageState extends State<MeetingPage> {
                       onSubmit: (values) => Navigator.pop(context),
 
                       // 👇👇👇 IMAGE AVANT LES BOUTONS
-                      topWidget: (meeting.imageUrl != null && meeting.imageUrl!.isNotEmpty) ||
+                      topWidget: (meeting.imageUrls != null && meeting.imageUrls!.isNotEmpty) ||
                           (meeting.signatureUrl != null && meeting.signatureUrl!.isNotEmpty)
                           ? Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
 
                           // 📷 صورة الاجتماع
-                          if (meeting.imageUrl != null && meeting.imageUrl!.isNotEmpty) ...[
+                          if (meeting.imageUrls != null && meeting.imageUrls!.isNotEmpty) ...[
                             const Text(
                               "📷 الصورة المرفقة للاجتماع",
                               textAlign: TextAlign.center,
@@ -678,17 +536,30 @@ class _MeetingPageState extends State<MeetingPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Image.network(
-                                meeting.imageUrl!,
-                                height: 200,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
+                            SizedBox(
+                              height: 200,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: meeting.imageUrls!.length,
+                                itemBuilder: (context, i) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Image.network(
+                                        meeting.imageUrls![i],
+                                        width: 200,
+                                        height: 200,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(height: 25),
                           ],
+
 
                           // ✍️ توقيع العميل
                           if (meeting.signatureUrl != null &&
@@ -736,5 +607,148 @@ class _MeetingPageState extends State<MeetingPage> {
       },
     );
   }
+  Widget _buildMeetingCard(BuildContext context, Meeting meeting) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // ================= TITRE + ACTIONS =================
+            Row(
+              children: [
+
+                /// 👇 AVATAR + TITRE
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: meeting.type == "مع العميل"
+                            ? Colors.green.withOpacity(0.2)
+                            : Colors.blue.withOpacity(0.2),
+                        child: Icon(
+                          meeting.type == "مع العميل"
+                              ? Icons.person
+                              : Icons.groups,
+                          color: TColor.primary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      /// 👇 TITRE SÉCURISÉ (COMME PROJECT)
+                      Expanded(
+                        child: Text(
+                          meeting.titleMeeting ?? "بدون عنوان",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Tajawal',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                /// 👇 ACTIONS
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.visibility, color: Colors.blue),
+                      tooltip: "عرض التفاصيل",
+                      onPressed: () => _openMeetingDetails(meeting),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                      tooltip: "PDF",
+                      onPressed: () => _generateMeetingPdf(meeting),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // ================= INFOS MEETING =================
+            _buildMeetingInfoRow(
+              Icons.description,
+              meeting.description,
+            ),
+
+            _buildMeetingInfoRow(
+              Icons.category,
+              meeting.type,
+            ),
+
+            _buildMeetingInfoRow(
+              Icons.engineering,
+              meeting.nameEngineer,
+            ),
+
+            _buildMeetingInfoRow(
+              Icons.account_circle,
+              meeting.nameEmployee,
+            ),
+
+            _buildMeetingInfoRow(
+              Icons.person,
+              meeting.nameCustomer,
+            ),
+
+            _buildMeetingInfoRow(
+              Icons.calendar_today,
+              meeting.dateMeeting
+                  ?.toLocal()
+                  .toString()
+                  .split(' ')[0],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildMeetingInfoRow(
+      IconData icon,
+      String? value,
+      ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Colors.grey[600],
+            size: 18,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              value?.isNotEmpty == true ? value! : "غير محدد",
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: 'Tajawal',
+                fontSize: 15,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
 }

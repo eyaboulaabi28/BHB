@@ -1,13 +1,19 @@
 import 'dart:convert';
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 
 class SelectLocationMap extends StatefulWidget {
-  const SelectLocationMap({super.key});
-  @override
+  final double? initialLat;
+  final double? initialLng;
+  const SelectLocationMap({
+    super.key,
+    this.initialLat,
+    this.initialLng,
+  });  @override
 
   State<SelectLocationMap> createState() => _SelectLocationMapState();
 }
@@ -16,6 +22,50 @@ class _SelectLocationMapState extends State<SelectLocationMap> {
   LatLng? selectedPosition;
   final TextEditingController _searchController = TextEditingController();
   GoogleMapController? _mapController;
+  LatLng? currentUserPosition;
+  bool isLoadingLocation = false;
+  Future<void> getCurrentUserLocation({bool moveCamera = true}) async {
+    try {
+      setState(() => isLoadingLocation = true);
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print("GPS désactivé");
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print("Permission refusée définitivement");
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final latLng = LatLng(position.latitude, position.longitude);
+
+      setState(() {
+        currentUserPosition = latLng;
+        selectedPosition = latLng;
+      });
+
+      if (moveCamera && _mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(latLng, 16),
+        );
+      }
+    } catch (e) {
+      print("Erreur localisation: $e");
+    } finally {
+      setState(() => isLoadingLocation = false);
+    }
+  }
 
   Future<String?> getAddressFromLatLng(LatLng position) async {
     const apiKey = 'AIzaSyCwrHbo-Su0la8PW46zDxofouVpMDMgnHI';
@@ -70,7 +120,13 @@ class _SelectLocationMapState extends State<SelectLocationMap> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialLat != null && widget.initialLng != null) {
+      selectedPosition = LatLng(widget.initialLat!, widget.initialLng!);
+    } else {
+      getCurrentUserLocation();
+    }
     requestLocationPermission();
+    getCurrentUserLocation();
   }
   @override
   Widget build(BuildContext context) {
@@ -114,12 +170,16 @@ class _SelectLocationMapState extends State<SelectLocationMap> {
               child: Stack(
                 children: [
                   GoogleMap(
-                    onMapCreated: (controller) => _mapController = controller,
-                    initialCameraPosition: const CameraPosition(
-                      target: LatLng(24.7136, 46.6753),
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: currentUserPosition ?? const LatLng(24.7136, 46.6753),
                       zoom: 10,
                     ),
-                    zoomControlsEnabled: false,   // ⚠️ On désactive les contrôles natifs
+                    zoomControlsEnabled: false,
+                    myLocationEnabled: true,        // 🔥 point bleu
+                    myLocationButtonEnabled: false, // on cache le bouton natif
                     onTap: (pos) {
                       setState(() {
                         selectedPosition = pos;
@@ -134,6 +194,7 @@ class _SelectLocationMapState extends State<SelectLocationMap> {
                       )
                     },
                   ),
+
 
                   // 🔥 Boutons Zoom personnalisés
                   Positioned(
@@ -164,7 +225,42 @@ class _SelectLocationMapState extends State<SelectLocationMap> {
 
                         ),
                         const SizedBox(height: 30),
+                        FloatingActionButton(
+                          mini: true,
+                          heroTag: "my_location",
+                          backgroundColor: Colors.blue,
+                          onPressed: () async {
+                            await getCurrentUserLocation();
+                          },
+                          child: isLoadingLocation
+                              ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : const Icon(Icons.my_location),
+                        ),
+                        // Bouton valider (check)
+                        const SizedBox(height: 30),
+                        FloatingActionButton(
+                          onPressed: () async {
+                            if (selectedPosition != null) {
 
+                              // 🔥 Récupérer adresse lisible
+                              String? address = await getAddressFromLatLng(selectedPosition!);
+
+                              Navigator.pop(context, {
+                                "lat": selectedPosition!.latitude,
+                                "lng": selectedPosition!.longitude,
+                                "address": address ?? "العنوان غير متوفر"
+                              });
+                            }
+                          },
+                          child: const Icon(Icons.check),
+                        ),
                       ],
                     ),
                   ),
@@ -174,23 +270,7 @@ class _SelectLocationMapState extends State<SelectLocationMap> {
           ],
         ),
 
-        // Bouton valider (check)
-        floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-            if (selectedPosition != null) {
 
-              // 🔥 Récupérer adresse lisible
-              String? address = await getAddressFromLatLng(selectedPosition!);
-
-              Navigator.pop(context, {
-                "lat": selectedPosition!.latitude,
-                "lng": selectedPosition!.longitude,
-                "address": address ?? "العنوان غير متوفر"
-              });
-            }
-          },
-          child: const Icon(Icons.check),
-        ),
 
       ),
     );

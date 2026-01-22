@@ -22,6 +22,10 @@ class AddProjectModal extends StatefulWidget {
 }
 
 class _AddProjectModalState extends State<AddProjectModal> {
+
+  double? selectedLat;
+  double? selectedLng;
+
   @override
   void initState() {
     super.initState();
@@ -107,9 +111,11 @@ class _AddProjectModalState extends State<AddProjectModal> {
           reportDate: _controllers["reportDate"]!.text,
           phaseResult: _controllers["phaseResult"]!.text,
           phoneNumber: _controllers["phoneNumber"]!.text,
+          latitude: selectedLat,
+          longitude: selectedLng,
         );
 
-        widget.onSubmit(project); // 🔹 On renvoie le Project
+        widget.onSubmit(project);
         Navigator.pop(context);
       }
     }
@@ -169,6 +175,8 @@ class _AddProjectModalState extends State<AddProjectModal> {
                   if (selected != null) {
                     setState(() {
                       _controllers["projectAddress"]!.text = selected["address"];
+                      selectedLat = selected["lat"];
+                      selectedLng = selected["lng"];
                     });
                   }
                 },
@@ -190,8 +198,8 @@ class _AddProjectModalState extends State<AddProjectModal> {
                 options: customers.map((e) => e.firstName ?? "").toList(),
                 controller: _controllers["ownerName"],
                 rightIcon: const Icon(Icons.person),
-                validator: (v) =>
-                (v == null || v.isEmpty) ? "الرجاء اختيار اسم المالك" : null,
+                enableSearch:true,
+
                 onChanged: (value) {
                   final selectedCustomer = customers.firstWhere(
                         (c) => c.firstName == value,
@@ -220,8 +228,11 @@ class _AddProjectModalState extends State<AddProjectModal> {
                 rightIcon: Icon(Icons.home_work, color: Colors.grey), // icône à gauche gris
               ),
               const SizedBox(height: 10),
-              _buildInput(Icons.description, "وصف البناء",
-                  _controllers["buildingDescription"]!),
+              _buildInput(
+                  Icons.description, "وصف البناء",
+                  _controllers["buildingDescription"]! ,  minLines: 1,
+                maxLines: 10, ),
+
               _buildInput(Icons.stairs, "عدد الأدوار", _controllers["floorsCount"]!,
                   keyboard: TextInputType.number),
             ],
@@ -238,7 +249,7 @@ class _AddProjectModalState extends State<AddProjectModal> {
               _buildInput(Icons.design_services, "مكتب المصمم المعتمد",
                   _controllers["designerOffice"]!),
               _buildInput(Icons.architecture, "المكتب الهندسي المشرف",
-                  _controllers["supervisorOffice"]!),
+                  _controllers["supervisorOffice"]!,maxLines: 5,),
               _buildInput(Icons.business, "مقاول البناء", _controllers["contractor"]!),
               //_buildInput(Icons.engineering, "اسم المهندس المشرف", _controllers["engineerName"]!),
               NewRoundSelectField(
@@ -246,7 +257,6 @@ class _AddProjectModalState extends State<AddProjectModal> {
                 options: engineers.map((e) => e.firstName ?? "").toList(),
                 controller: _controllers["engineerName"],
                 rightIcon: const Icon(Icons.person),
-                validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار اسم المهندس المشرف" : null,
               ),
               const SizedBox(height: 10),
               _buildInput(Icons.calendar_today, "تاريخ التقرير",
@@ -287,7 +297,8 @@ class _AddProjectModalState extends State<AddProjectModal> {
       TextEditingController controller,
       {String? validator,
         TextInputType keyboard = TextInputType.text,
-        bool isDate = false,VoidCallback? onTap, }) {
+        bool isDate = false,VoidCallback? onTap,  int minLines = 1,
+      int maxLines = 5, }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: NewRoundTextField(
@@ -297,6 +308,8 @@ class _AddProjectModalState extends State<AddProjectModal> {
         keyboardType: keyboard,
         obscureText: false,
         onTap: onTap,
+      minLines: minLines,
+      maxLines: maxLines,
         right: isDate
             ? GestureDetector(
           onTap: () => _selectReportDate(controller),

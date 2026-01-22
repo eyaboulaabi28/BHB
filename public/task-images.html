@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <title>صور المهمة</title>
+    <style>
+        body { font-family: Arial, Tahoma; background: #f4f6f8; padding: 20px; }
+        h1 { text-align: center; color: #022C43; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 20px; font-size: 14px; }
+        .grid { max-width: 700px; margin: auto; display: flex; flex-direction: column; gap: 16px; }
+        .photo-card { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+        .photo-title { font-weight: bold; margin-bottom: 8px; color: #333; text-align: center; }
+        img { width: 100%; border-radius: 6px; border: 1px solid #ddd; }
+        .empty { text-align: center; color: #999; margin-top: 40px; }
+    </style>
+</head>
+<body>
+
+<h1>📸 صور المرحلة الفرعية</h1>
+<div class="subtitle">جميع الصور المرتبطة بهذه المرحلة الفرعية</div>
+<div class="grid" id="images"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 🔹 Config Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCcp7l5I4ftPHAp6F6CMPR3pzRbNVx9dRw",
+      authDomain: "bhbgroup-ed1bc.firebaseapp.com",
+      projectId: "bhbgroup-ed1bc",
+      storageBucket: "bhbgroup-ed1bc.firebasestorage.app",
+      messagingSenderId: "259953238721",
+      appId: "1:259953238721:web:cdff9688f9f47ed8856a40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 🔹 Récupérer subStageId et projectId depuis l'URL
+    const params = new URLSearchParams(window.location.search);
+    const subStageId = params.get("subStageId");
+    const projectId = params.get("projectId");
+
+    if (!subStageId || !projectId) {
+        document.body.innerHTML += "<p class='empty'>❌ subStageId أو projectId مفقود</p>";
+        throw new Error("Missing params");
+    }
+
+    // 🔹 Requête Firestore : filtrer par subStageId ET projectId
+    const q = query(
+        collection(db, "tasks"),
+        where("subStageId", "==", subStageId),
+        where("projectId", "==", projectId)
+    );
+
+    const snapshot = await getDocs(q);
+    const container = document.getElementById("images");
+
+    if (snapshot.empty) {
+        container.innerHTML = "<p class='empty'>لا توجد صور لهذه المرحلة الفرعية</p>";
+    }
+
+    let index = 1;
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const allImages = [
+            ...(data.imagesBefore || []),
+            ...(data.imagesAfter || [])
+        ];
+
+        allImages.forEach(url => {
+            if (!url) return;
+
+            const card = document.createElement("div");
+            card.className = "photo-card";
+
+            const title = document.createElement("div");
+            title.className = "photo-title";
+            title.textContent = `الصورة رقم ${index}`;
+
+            const img = document.createElement("img");
+            img.src = url;
+            img.loading = "lazy";
+
+            card.appendChild(title);
+            card.appendChild(img);
+            container.appendChild(card);
+
+            index++;
+        });
+    });
+
+    if (container.children.length === 0) {
+        container.innerHTML = "<p class='empty'>لا توجد صور لهذه المرحلة الفرعية</p>";
+    }
+
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import 'package:app_bhb/data/auth/source/auth_firebase_service.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/home/home_page.dart';
 import 'package:app_bhb/presentation/pages/notification/notifications_page.dart';
 import 'package:app_bhb/presentation/pages/projects/projects_page.dart';
@@ -12,12 +13,14 @@ class CustomBottomNav extends StatelessWidget {
   final Function(int) onTap;
   final String selectedType;
   final int notificationCount = 5;
+  final String projectName;
 
   const CustomBottomNav({
     super.key,
     required this.selectedIndex,
     required this.onTap,
-    required this.selectedType
+    required this.selectedType,
+    required this.projectName
   });
 
   @override
@@ -25,6 +28,7 @@ class CustomBottomNav extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 0),
       child: BottomAppBar(
+        clipBehavior: Clip.none,
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         color: TColor.secondary,
@@ -49,7 +53,7 @@ class CustomBottomNav extends StatelessWidget {
                       onTap(0);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => UserPage(selectedType: selectedType)),
+                        MaterialPageRoute(builder: (_) => UserPage(selectedType: selectedType,projectName: "",)),
                       );
                     },
                   ),
@@ -72,39 +76,18 @@ class CustomBottomNav extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => NotificationsPage(selectedType: selectedType)),
+                              builder: (_) =>
+                                  NotificationsPage(selectedType: selectedType,projectName: projectName,),
+                            ),
                           );
                         },
                       ),
+                      // ✅ BADGE
+                      const NotificationBadge(),
 
-                      // Badge notification
-                      if (notificationCount > 0)
-                        Positioned(
-                          right: 4,
-                          top: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Text(
-                              notificationCount.toString(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
+
                 ],
               ),
 
@@ -136,6 +119,7 @@ class CustomBottomNav extends StatelessWidget {
                           builder: (_) => ProjectsPage(
                             selectedType: selectedType,
                             userRole: userRole, // <-- On passe le rôle ici
+                            projectName: projectName,
                           ),
                         ),
                       );
@@ -167,6 +151,7 @@ class CustomBottomNav extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => HomeScreen(
                             selectedType: selectedType,
+                            projectName: projectName,
                           ),
                         ),
                       );
@@ -180,6 +165,58 @@ class CustomBottomNav extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class NotificationBadge extends StatelessWidget {
+  const NotificationBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // 🔐 Récupération sécurisée de l'utilisateur Firebase
+    final user = FirebaseAuth.instance.currentUser;
+
+    // ⛔ Aucun utilisateur → aucun badge
+    if (user == null) {
+      return const SizedBox();
+    }
+
+    return StreamBuilder<int>(
+      stream: GetUnreadNotificationCountUseCase().call(user.uid),
+      builder: (context, snapshot) {
+        // 🔕 Pas de données ou 0 notification
+        if (!snapshot.hasData || snapshot.data == 0) {
+          return const SizedBox();
+        }
+
+        // 🔔 Badge rouge
+        return Positioned(
+          right: -2,
+          top: -2,
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            constraints: const BoxConstraints(
+              minWidth: 18,
+              minHeight: 18,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              snapshot.data.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

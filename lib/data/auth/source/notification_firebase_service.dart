@@ -7,6 +7,7 @@ abstract class NotificationFirebaseService {
   Future<void> createNotification(NotificationsModel notification);
   Future<Either> getAllNotifications();
   Future<void> markAsRead(String id);
+  Stream<int> unreadNotificationsCount(String userId);
 
 }
 class NotificationFirebaseServiceImpl implements NotificationFirebaseService {
@@ -42,4 +43,14 @@ class NotificationFirebaseServiceImpl implements NotificationFirebaseService {
       'isRead': true,
     });
   }
+  @override
+  Stream<int> unreadNotificationsCount(String userId) {
+    return FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
 }

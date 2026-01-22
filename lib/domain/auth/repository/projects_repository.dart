@@ -6,6 +6,7 @@ abstract class ProjectsRepository {
   Future<Either> getAllProjects();
   Future<Either> deleteProject(String id);
   Future<Either> getProjectById(String id);
+  Future<Either> updateProject(Project project);
   Future<void> updateStageStatus(
       String projectId,
       String stageId,
@@ -29,4 +30,5 @@ abstract class ProjectsRepository {
       String testId,
       String status,
       );
+
 }

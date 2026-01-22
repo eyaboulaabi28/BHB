@@ -302,16 +302,16 @@ class _RoleuserPageState extends State<RoleuserPage> {
                             Widget targetScreen;
                             switch (selectedRole) {
                               case "admin":
-                                targetScreen = HomeScreen(selectedType: "admin");
+                                targetScreen = HomeScreen(selectedType: "admin",projectName: "");
                                 break;
                               case "engineer":
-                                targetScreen = HomeScreen(selectedType: "engineer");
+                                targetScreen = HomeScreen(selectedType: "engineer",projectName: "");
                                 break;
                               case "resource":
-                                targetScreen = HomeScreen(selectedType: "resource");
+                                targetScreen = HomeScreen(selectedType: "resource",projectName: "");
                                 break;
                               case "customer":
-                                targetScreen = HomeScreen(selectedType: "customer");
+                                targetScreen = HomeScreen(selectedType: "customer",projectName: "");
                                 break;
                               default:
                                 targetScreen = const LoginPage(email: '', password: '');
