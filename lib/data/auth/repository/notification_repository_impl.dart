@@ -25,4 +25,9 @@ class NotificationRepositoryImpl extends NotificationRepository {
     return sl<NotificationFirebaseService>()
         .unreadNotificationsCount(userId);
   }
+
+  @override
+  Future<Either> getAllNotifications1({required String userId, required String role}) async{
+    return await sl<NotificationFirebaseService>().getAllNotifications1(userId: userId, role: role);
+  }
 }

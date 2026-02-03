@@ -8,6 +8,10 @@ abstract class NotificationFirebaseService {
   Future<Either> getAllNotifications();
   Future<void> markAsRead(String id);
   Stream<int> unreadNotificationsCount(String userId);
+  Future<Either> getAllNotifications1({
+    required String userId,
+    required String role,
+  });
 
 }
 class NotificationFirebaseServiceImpl implements NotificationFirebaseService {
@@ -52,5 +56,31 @@ class NotificationFirebaseServiceImpl implements NotificationFirebaseService {
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
+
+  @override
+  Future<Either> getAllNotifications1({required String userId, required String role,}) async {
+    try {
+      Query query = _firestore
+          .collection('notifications')
+          .orderBy('createdAt', descending: true);
+
+      // 👇 customer يشوف غير متاعو
+      if (role == "customer") {
+        query = query.where('userId', isEqualTo: userId);
+      }
+
+      final querySnapshot = await query.get();
+
+      final notifications = querySnapshot.docs
+          .map((doc) => NotificationsModel.fromMap(doc.id, doc.data() as Map<String, dynamic>,))
+          .toList();
+
+      return Right(notifications);
+    } catch (e) {
+      print('Error fetching notifications: $e');
+      return Left('Error fetching notifications: $e');
+    }
+  }
+
 
 }

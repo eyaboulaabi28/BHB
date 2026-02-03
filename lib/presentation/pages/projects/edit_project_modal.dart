@@ -161,12 +161,9 @@ class _EditProjectModalState extends State<EditProjectModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildStepTitle("معلومات أساسية"),
-              _buildInput(Icons.location_city, "الأمانة", _controllers["municipality"]!,
-                  validator: "الرجاء إدخال الأمانة"),
-              _buildInput(Icons.apartment, "البلدية", _controllers["district"]!,
-                  validator: "الرجاء إدخال البلدية"),
-              _buildInput(Icons.work, "اسم المشروع", _controllers["projectName"]!,
-                  validator: "الرجاء إدخال اسم المشروع"),
+              _buildInput(Icons.location_city, "الأمانة", _controllers["municipality"]!),
+              _buildInput(Icons.apartment, "البلدية", _controllers["district"]!,),
+              _buildInput(Icons.work, "اسم المشروع", _controllers["projectName"]!,),
               _buildInput(
                 Icons.map,
                 "عنوان المشروع",
@@ -246,7 +243,6 @@ class _EditProjectModalState extends State<EditProjectModal> {
                 options: engineers.map((e) => e.firstName ?? "").toList(),
                 controller: _controllers["engineerName"],
                 rightIcon: const Icon(Icons.person),
-                validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار اسم المهندس المشرف" : null,
               ),
               const SizedBox(height: 10),
               _buildInput(Icons.calendar_today, "تاريخ التقرير",
@@ -286,7 +282,6 @@ class _EditProjectModalState extends State<EditProjectModal> {
       IconData icon,
       String hint,
       TextEditingController controller, {
-        String? validator,
         VoidCallback? onTap,
         TextInputType keyboard = TextInputType.text,
         bool isDate = false,
@@ -298,12 +293,6 @@ class _EditProjectModalState extends State<EditProjectModal> {
       child: NewRoundTextField(
         hintText: hint,
         controller: controller,
-        validator: validator != null
-            ? (v) {
-          if (v == null || v.isEmpty) return validator;
-          return null;
-        }
-            : null,
         keyboardType: keyboard,
         obscureText: false,
         onTap: onTap,

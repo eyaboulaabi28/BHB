@@ -125,9 +125,9 @@ class NewRoundTextField extends StatelessWidget {
                   minLines: (minLines != null && minLines! > 0) ? minLines : 1,
                   maxLines: maxLines ?? 10,
                   style: const TextStyle(
-                    fontFamily: 'Tajawal', // 🔹 Police arabe correcte
+                    fontFamily: 'Tajawal',
                     fontSize: 16,
-                    height: 1.4, // 🔹 Ligne ajustée pour lettres arabes
+                    height: 1.4,
                   ),
                   onTap: onTap,
                   onChanged: (value) {
@@ -142,7 +142,7 @@ class NewRoundTextField extends StatelessWidget {
                     focusedErrorBorder: InputBorder.none,
                     hintText: hintText,
                     hintStyle: TextStyle(
-                      fontFamily: 'Tajawal', // 🔹 hint en arabe lisible
+                      fontFamily: 'Tajawal' ,
                       color: readOnly
                           ? Colors.grey.shade500
                           : Colors.grey.shade400,

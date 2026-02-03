@@ -1,14 +1,17 @@
 
 import 'package:app_bhb/data/auth/repository/attachments_repository_impl.dart';
+import 'package:app_bhb/data/auth/repository/attendance_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/auth_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/check_in_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/comments_project_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/contact_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/customers_repository_impl.dart';
+import 'package:app_bhb/data/auth/repository/date_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/employees_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/engineers_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/materials_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/meeting_repository_impl.dart';
+import 'package:app_bhb/data/auth/repository/newSite_Repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/notification_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/operationals_test_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/projects_repository_impl.dart';
@@ -21,16 +24,19 @@ import 'package:app_bhb/data/auth/repository/task_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/tasks_test_repository_impl.dart';
 import 'package:app_bhb/data/auth/repository/vacation_repository_impl.dart';
 import 'package:app_bhb/data/auth/source/attachments_firebase_service.dart';
+import 'package:app_bhb/data/auth/source/attendance_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/auth_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/check_in_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/comments_project_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/contact_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/customers_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/daily_task_firebase_service.dart';
+import 'package:app_bhb/data/auth/source/date_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/employees_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/engineers_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/materials_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/meeting_firebase_service.dart';
+import 'package:app_bhb/data/auth/source/newSite_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/notification_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/operationals_test_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/projects_firebase_service.dart';
@@ -42,14 +48,17 @@ import 'package:app_bhb/data/auth/source/tasks_tests_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/vacation_firebase_service.dart';
 import 'package:app_bhb/domain/auth/repository/MeetingRepository.dart';
 import 'package:app_bhb/domain/auth/repository/attachments_repository.dart';
+import 'package:app_bhb/domain/auth/repository/attendance_repository.dart';
 import 'package:app_bhb/domain/auth/repository/auth_repository.dart';
 import 'package:app_bhb/domain/auth/repository/check_in_repository.dart';
 import 'package:app_bhb/domain/auth/repository/comments_project_repository.dart';
 import 'package:app_bhb/domain/auth/repository/contact_repository.dart';
 import 'package:app_bhb/domain/auth/repository/daily_tasks_repository.dart';
+import 'package:app_bhb/domain/auth/repository/date_repository.dart';
 import 'package:app_bhb/domain/auth/repository/employees_repository.dart';
 import 'package:app_bhb/domain/auth/repository/engineers_repository.dart';
 import 'package:app_bhb/domain/auth/repository/materials_repository.dart';
+import 'package:app_bhb/domain/auth/repository/newSite_Repository.dart';
 import 'package:app_bhb/domain/auth/repository/notification_repository.dart';
 import 'package:app_bhb/domain/auth/repository/operationals_test_repository.dart';
 import 'package:app_bhb/domain/auth/repository/projects_repository.dart';
@@ -60,6 +69,9 @@ import 'package:app_bhb/domain/auth/repository/sub_stages_repository.dart';
 import 'package:app_bhb/domain/auth/repository/task_repository.dart';
 import 'package:app_bhb/domain/auth/repository/tasks_test_repository.dart';
 import 'package:app_bhb/domain/auth/repository/vacation_repository.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_attendance.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_date.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_newsite.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_signature.dart';
 import 'package:app_bhb/domain/auth/usecases/get_roles.dart';
 import 'package:app_bhb/domain/auth/usecases/materials_usecases.dart';
@@ -123,10 +135,12 @@ Future<void> initializeDependencies () async {
   sl.registerSingleton<NotificationFirebaseService>(NotificationFirebaseServiceImpl(),);
   sl.registerSingleton<SettingsFirebaseService>(SettingsFirebaseServiceImpl(),);
   sl.registerSingleton<SignatureFirebaseService>(SignatureFirebaseServiceImpl(),);
+  sl.registerSingleton<AttendanceFirebaseService>(AttendanceFirebaseServiceImpl(),);
+  sl.registerSingleton<DateFirebaseService>(DateFirebaseServiceImpl(),);
+  sl.registerSingleton<NewSiteFirebaseService>(NewSiteFirebaseServiceImpl(),);
 
 
   //Repositories
-
   sl.registerSingleton<AuthRepository>(AuthRepositoryImpl());
   sl.registerSingleton<EngineerRepository>(EngineerRepositoryImpl());
   sl.registerSingleton<CustomerRepository>(CustomerRepositoryImpl());
@@ -149,6 +163,9 @@ Future<void> initializeDependencies () async {
   sl.registerSingleton<NotificationRepository>(NotificationRepositoryImpl(),);
   sl.registerSingleton<SettingsRepository>(SettingsRepositoryImpl(),);
   sl.registerSingleton<SignatureRepository>(SignatureRepositoryImp(),);
+  sl.registerSingleton<AttendanceRepository>(AttendanceRepositoryImpl(),);
+  sl.registerSingleton<DateRepository>(DateRepositoryImpl(),);
+  sl.registerSingleton<NewSiteRepository>(NewSiteRepositoryImpl(),);
 
 
   //Usecases Authentication
@@ -210,6 +227,26 @@ Future<void> initializeDependencies () async {
   sl.registerSingleton<DeleteMeetingUseCase>(DeleteMeetingUseCase(sl<MeetingRepository>()),);
   sl.registerSingleton<GetMeetingByIdUseCase>(GetMeetingByIdUseCase(sl<MeetingRepository>()),);
 
+  // Attendance usecases
+  sl.registerSingleton<AddAttendanceUseCase>(AddAttendanceUseCase());
+  sl.registerSingleton<GetAttendanceUseCase>(GetAttendanceUseCase(sl<AttendanceRepository>()),);
+  sl.registerSingleton<GetAttendanceByIdUseCase>(GetAttendanceByIdUseCase(sl<AttendanceRepository>()),);
+  sl.registerSingleton<GetAttendanceByEmployeeAndMonthUseCase>(GetAttendanceByEmployeeAndMonthUseCase(sl<AttendanceRepository>()),);
+
+  // Date usecases
+  sl.registerSingleton<GetDateUseCase>(GetDateUseCase(sl<DateRepository>()));
+  sl.registerSingleton<AddDateUseCase>(AddDateUseCase());
+  sl.registerSingleton<GetDateByIdUseCase>(GetDateByIdUseCase(sl<DateRepository>()));
+  sl.registerSingleton<UpdateDateUseCase>(UpdateDateUseCase());
+
+
+  //NewSite usecases
+  sl.registerSingleton<AddNewSiteUseCase>(AddNewSiteUseCase());
+  sl.registerSingleton<GetNewSiteUseCase>(GetNewSiteUseCase(sl<NewSiteRepository>()),);
+  sl.registerSingleton<GetNewSiteByIdUseCase>(GetNewSiteByIdUseCase(sl<NewSiteRepository>()),);
+  sl.registerSingleton<UpdateSiteTasksUseCase>(UpdateSiteTasksUseCase(sl<NewSiteRepository>()),);
+
+
   // Stages usecases
   sl.registerSingleton<AddStageUseCase>(AddStageUseCase(sl<StagesRepository>()));
   sl.registerSingleton<GetStageUseCase>(GetStageUseCase(sl<StagesRepository>()));
@@ -224,16 +261,7 @@ Future<void> initializeDependencies () async {
   // SubStages usecases
   sl.registerSingleton<AddSubStageUseCase>(AddSubStageUseCase(sl<SubStagesRepository>()));
   sl.registerSingleton<GetSubStageUseCase>(GetSubStageUseCase(sl<SubStagesRepository>()));
-  /*sl.registerLazySingleton<UpdateSubStageStatusUseCase>(
-          () => UpdateSubStageStatusUseCase(sl<SubStagesRepository>())
-  );*/
-  // PDF usecases
-  /*sl.registerLazySingleton<StagePdfGenerator>(() => StagePdfGenerator(
-    projectId: '',
-    stage: {},
-    subStages: [],
-    tasks: [],
-  ));*/
+
 
   // OperationalsTest usecases
   sl.registerSingleton<AddOperationalsTestUseCase>(AddOperationalsTestUseCase(sl<OperationalsTestRepository>()));
@@ -306,6 +334,7 @@ Future<void> initializeDependencies () async {
   // UseCases Notification
   sl.registerSingleton<CreateNotificationUseCase>(CreateNotificationUseCase());
   sl.registerSingleton<GetNotificationUseCase>(GetNotificationUseCase());
+  sl.registerSingleton<GetNotificationUseCase1>(GetNotificationUseCase1());
   sl.registerSingleton<MarkNotificationAsReadUseCase>(MarkNotificationAsReadUseCase());
   sl.registerSingleton<GetUnreadNotificationCountUseCase>(GetUnreadNotificationCountUseCase());
   //UseCases Settings

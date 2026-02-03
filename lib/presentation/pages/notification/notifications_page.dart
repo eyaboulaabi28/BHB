@@ -1,8 +1,10 @@
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/custom_bottom_nav.dart';
+import 'package:app_bhb/data/auth/source/auth_firebase_service.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../service_locator.dart';
@@ -25,7 +27,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
+    _loadNotifications1();
   }
   String formatDateToArabic(DateTime date) {
     // Chiffres occidentaux → chiffres arabes
@@ -78,6 +80,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
     setState(() {
       _selectedIndex = index;
     });
+  }
+  void _loadNotifications1() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final userProfile =
+    await sl<AuthFirebaseService>().getUserProfile(uid);
+
+    userProfile.fold(
+          (err) {},
+          (data) async {
+        final role = data['role'];
+
+        final result = await sl<GetNotificationUseCase1>().call(
+          userId: uid,
+          role: role,
+        );
+
+        result.fold(
+              (error) {
+            CustomSnackBar.show(
+              context,
+              message: error,
+              type: SnackBarType.error,
+            );
+          },
+              (list) {
+            setState(() {
+              notification = List<NotificationsModel>.from(list);
+            });
+          },
+        );
+      },
+    );
   }
 
   @override

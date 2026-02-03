@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
 import '../../../service_locator.dart';
-
 class FormFieldConfig {
   final String key;
   final String hint;
@@ -495,7 +494,8 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                   if (_meetingType == "مع العميل")
                     Padding(
                       padding: const EdgeInsets.only(bottom: 15),
-                      child: NewRoundSelectField(
+                      child:
+                      NewRoundSelectField(
                         hintText: "اختيار العميل",
                         enableSearch:true,
                         options: customers.map((c) => c.firstName ?? "").toList(),

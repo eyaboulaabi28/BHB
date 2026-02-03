@@ -455,12 +455,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         'الدور الخامس',
                         'السطح',
                       ],
-                      validator: (value) {
-                        if (isCeilingStage && (value == null || value.isEmpty)) {
-                          return 'الرجاء اختيار الطابق';
-                        }
-                        return null;
-                      },
                       onChanged: (value) {
                         // 🔥 UI فقط → ربط النص بالقيمة المنطقية
                         setState(() {

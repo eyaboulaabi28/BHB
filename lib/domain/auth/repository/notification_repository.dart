@@ -7,4 +7,8 @@ abstract class NotificationRepository {
   Future<Either> getAllNotifications();
   Future<void> markAsRead(String id);
   Stream<int> unreadCount(String userId);
+  Future<Either> getAllNotifications1({
+    required String userId,
+    required String role,
+  });
 }

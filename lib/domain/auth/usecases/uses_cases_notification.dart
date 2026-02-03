@@ -32,3 +32,17 @@ class GetUnreadNotificationCountUseCase {
     return _repo.unreadCount(userId);
   }
 }
+class GetNotificationUseCase1 {
+  final NotificationRepository _repo = sl<NotificationRepository>();
+
+  Future<Either> call({
+    required String userId,
+    required String role,
+  }) async {
+    return await _repo.getAllNotifications1(
+      userId: userId,
+      role: role,
+    );
+  }
+}
+
