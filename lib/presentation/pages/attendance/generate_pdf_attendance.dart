@@ -95,11 +95,21 @@ class AttendancePdfGenerator {
       ) async {
     final totalOvertimeMinutes = attendances
         .where((a) => a.overtimeHours != null)
-        .fold<double>(0, (sum, a) => sum + a.overtimeHours!);
+        .fold<double>(
+        0,
+            (sum, a) =>
+        sum + double.tryParse(a.overtimeHours!)!
+    );
 
     final totalWaitingMinutes = attendances
         .where((a) => a.waitingHours != null)
-        .fold<double>(0, (sum, a) => sum + a.waitingHours!);
+        .fold<double>(
+        0,
+            (sum, a) =>
+        sum + double.tryParse(a.waitingHours!)!
+    );
+
+
 
     final totalOvertimeHours = totalOvertimeMinutes / 60;
     final totalWaitingHours = totalWaitingMinutes / 60;
@@ -532,22 +542,22 @@ class AttendancePdfGenerator {
 
                     _infoRow("📝 نهاية الدوام", _formatTime(a.endTime), arabicFont, emojiFont),
 
-
-                    if (a.waitingHours != null)
+                    if (a.waitingHours != null && a.waitingHours!.isNotEmpty)
                       _infoRow(
                         "⌛الانتظار",
-                        "${(a.waitingHours! / 60).toStringAsFixed(2)} س",
+                        "${(double.tryParse(a.waitingHours!)! / 60).toStringAsFixed(2)} س",
                         arabicFont,
                         emojiFont,
                       ),
 
-                    if (a.overtimeHours != null)
+                    if (a.overtimeHours != null && a.overtimeHours!.isNotEmpty)
                       _infoRow(
                         "🧮 إضافية",
-                        "${(a.overtimeHours! / 60).toStringAsFixed(2)} س",
+                        "${(double.tryParse(a.overtimeHours!)! / 60).toStringAsFixed(2)} س",
                         arabicFont,
                         emojiFont,
                       ),
+
                     if (a.notes != null && a.notes!.trim().isNotEmpty)
                       pw.Text(
                         "📝 ملاحظات: ${a.notes ?? "-"}",

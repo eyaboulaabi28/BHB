@@ -3,8 +3,8 @@ class Attendance {
   String? employeeName;
   DateTime? startTime;
   DateTime? endTime;
-  double? waitingHours;
-  double? overtimeHours;
+  String? waitingHours;
+  String? overtimeHours;
   String? signatureUrl;
   String? customerName;
   DateTime? createdAt;
@@ -54,10 +54,10 @@ class Attendance {
           ? DateTime.parse(map['endTime'])
           : null,
       waitingHours: map['waitingHours'] != null
-          ? (map['waitingHours'] as num).toDouble()
+          ? map['waitingHours'].toString()
           : null,
       overtimeHours: map['overtimeHours'] != null
-          ? (map['overtimeHours'] as num).toDouble()
+          ? map['overtimeHours'].toString()
           : null,
       signatureUrl: map['signatureUrl'],
       customerName: map['customerName'],
@@ -65,7 +65,7 @@ class Attendance {
           ? DateTime.parse(map['createdAt'])
           : null,
       notes: map['notes'],
-
     );
   }
+
 }

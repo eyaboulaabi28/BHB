@@ -61,8 +61,10 @@ class NewSiteFirebaseServiceImpl extends NewSiteFirebaseService {
         'task': task.toMap(),
         'generalRemark': generalRemark,
       });
-      return Right(true);
+      return Right(true); // <-- success ici est un bool
     } catch (e) {
       return Left(e.toString());
     }
-  }}
+  }
+
+}

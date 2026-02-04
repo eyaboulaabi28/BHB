@@ -204,6 +204,7 @@ class _NewSitePageState extends State<NewSitePage> {
                   setState(() {
                     newSites.add(
                       NewSite(
+                        id: values["id"],
                         customerName: values["customerName"],
                         projectName: values["projectName"],
                         phone: values["phone"],
@@ -212,6 +213,7 @@ class _NewSitePageState extends State<NewSitePage> {
                         latitude: values["latitude"],
                         longitude: values["longitude"],
                         createdAt : values["createdAt"] ,
+
                         task: SiteTask(items: []),
                       ),
                     );
@@ -354,15 +356,21 @@ class _NewSitePageState extends State<NewSitePage> {
                       );
                       return; // Stop, ne pas ouvrir le modal
                     }
-
+                    if (site.id == null) {
+                      CustomSnackBar.show(context,
+                          message: "خطأ: لا يمكن فتح تفاصيل الموقع بدون معرف.",
+                          type: SnackBarType.error);
+                      return;
+                    }
                     // Sinon ouvrir le modal normalement
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       builder: (_) => AddSiteTasksModal(
                         siteId: site.id!,
+                        site: site,
                         onSubmit: (tasks, generalRemark) async {
-                          site.task.items = tasks.first.items; // 👈 copier les éléments
+                          site.task.items = tasks.first.items;
                           site.generalRemark = generalRemark;
 
                           await sl<NewSiteFirebaseService>().updateTasksForSite(site.id!, site.task, generalRemark);
@@ -379,30 +387,13 @@ class _NewSitePageState extends State<NewSitePage> {
                   tooltip: "تصدير PDF",
                   onPressed: () async {
                     if (site == null) return;
-
-                    try {
-                      final pdf = await NewSitePdfGenerator.generate(site: site!);
-                      final pdfBytes = await pdf.save(); // ✅ مهم جداً
-
-                      await Printing.sharePdf(
-                        bytes: pdfBytes,
-                        filename: 'تفاصيل_زيارة_الموقع.pdf',
-                      );
-
-                      CustomSnackBar.show(
-                        context,
-                        message: "✅ تم إنشاء وتصدير ملف PDF بنجاح",
-                        type: SnackBarType.success,
-                      );
-                    } catch (e) {
-                      CustomSnackBar.show(
-                        context,
-                        message: "❌ خطأ أثناء إنشاء PDF: $e",
-                        type: SnackBarType.error,
-                      );
-                    }
+                    await NewSitePdfGenerator.generate(
+                      site: site,
+                      context: context,
+                    );
                   },
                 ),
+
 
 
               ],

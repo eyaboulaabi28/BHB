@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
@@ -12,10 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 import '../../../service_locator.dart';
-
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:signature/signature.dart';
 
 /// ================== FORM FIELD CONFIG ==================
 class FormFieldConfig {
@@ -57,27 +55,29 @@ class AddAttendanceModal extends StatefulWidget {
 }
 
 class _AddAttendanceModalState extends State<AddAttendanceModal> {
+
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
   bool _isSubmitting = false;
-
+  Timer? _hoursTimer;
   String? selectedHoursType;
   late final Map<String, TextEditingController> _controllers;
   List<Customers> customers = [];
   final TextEditingController customerCtrl = TextEditingController();
   String? selectedCustomerId;
   String? signatureUrl;
+  String? hoursErrorMessage;
+
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
-
   @override
   void initState() {
     super.initState();
     _loadCustomers();
-
+    _hoursTimer?.cancel();
     _controllers = {
       "employeeName": TextEditingController(text: widget.initialEmployeeName ?? ""),
       "date": TextEditingController(text: _formatDate(DateTime.now())),
@@ -89,26 +89,43 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
       "notes": TextEditingController(),
     };
   }
-  String _calculateDiffFromEndTime() {
-    final endTimeText = _controllers["endTime"]?.text;
-    final dateText = _controllers["date"]?.text;
 
-    if (endTimeText == null || dateText == null) return "";
+  String _calculateDiffFromStartToEndDecimal() {
+    try {
+      final startParts = _controllers["startTime"]!.text.split(":");
+      final endParts = _controllers["endTime"]!.text.split(":");
 
-    final endDateTime = DateTime.tryParse("$dateText $endTimeText");
-    if (endDateTime == null) return "";
+      if (startParts.length != 2 || endParts.length != 2) return "0.00";
 
-    final now = DateTime.now();
+      final startMinutes =
+          int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
+      final endMinutes =
+          int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
 
-    if (now.isBefore(endDateTime)) return "00:00";
+      int diffMinutes = endMinutes - startMinutes;
 
-    final diff = now.difference(endDateTime);
+      if (diffMinutes <= 0) return "0.00";
 
-    final hours = diff.inHours;
-    final minutes = diff.inMinutes.remainder(60);
-
-    return "${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}";
+      final decimal = diffMinutes / 60.0;
+      return decimal.toStringAsFixed(2);
+    } catch (_) {
+      return "0.00";
+    }
   }
+
+  double _parseHoursTextToDecimal(String text) {
+    try {
+      final regex = RegExp(r"(\d+)\s*ساعة\s*و\s*(\d+)\s*دقيقة");
+      final match = regex.firstMatch(text);
+      if (match != null) {
+        final hours = int.parse(match.group(1)!);
+        final minutes = int.parse(match.group(2)!);
+        return hours + minutes / 60.0;
+      }
+    } catch (_) {}
+    return 0.0;
+  }
+
 
   String _formatDate(DateTime date) =>
       "${date.year}-${_twoDigits(date.month)}-${_twoDigits(date.day)}";
@@ -123,6 +140,60 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
     );
   }
 
+  String _calculateDiffFromNowToEndTime() {
+    try {
+      final now = DateTime.now();
+
+      final parts = _controllers["endTime"]!.text.split(":");
+      if (parts.length != 2) return "0 ساعة";
+
+      final endTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+
+      final diffMinutes = now.difference(endTime).inMinutes.abs();
+      if (diffMinutes <= 0) return "0 ساعة";
+
+      final hours = diffMinutes ~/ 60;
+      final minutes = diffMinutes % 60;
+
+      return "$hours ساعة و $minutes دقيقة";
+    } catch (_) {
+      return "0 ساعة";
+    }
+  }
+
+
+
+  void _startHoursTimer() {
+    _hoursTimer?.cancel();
+
+    _hoursTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted || selectedHoursType == null) return;
+
+      final diff = _calculateDiffFromNowToEndTime();
+
+      setState(() {
+        _controllers[selectedHoursType == "waiting"
+            ? "waitingHours"
+            : "overtimeHours"]!
+            .text = "$diff ";
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _hoursTimer?.cancel();
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
   Future<String?> _uploadSignatureToFirebase(Uint8List bytes) async {
     try {
       final ref = FirebaseStorage.instance
@@ -217,133 +288,159 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
       Step(
         title: const Text("الدوام"),
         isActive: _currentStep >= 1,
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("بداية الدوام", style: TextStyle(fontFamily: 'Tajawal', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 5),
-            NewRoundTextField(
-              hintText: "بداية الدوام",
-              controller: _controllers["startTime"],
-              right: const Icon(Icons.login),
-              readOnly: true,
-            ),
-            const SizedBox(height: 12),
-            const Text("نهاية الدوام", style: TextStyle(fontFamily: 'Tajawal', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 5),
-            NewRoundTextField(
-              hintText: "نهاية الدوام",
-              controller: _controllers["endTime"],
-              right: const Icon(Icons.logout),
-              readOnly: true,
-            ),
-            const SizedBox(height: 12),
-            const Text("نوع الساعات", style: TextStyle(fontFamily: 'Tajawal', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 5),
-            FormField<String>(
-              validator: (_) => (selectedHoursType == null) ? "الرجاء اختيار نوع الساعات" : null,
-              builder: (state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    NewRoundSelectField(
-                      hintText: "اختيار نوع الساعات",
-                      options: const ["عدد ساعات الانتظار", "عدد الساعات الإضافية"],
-                      controller: TextEditingController(
-                        text: selectedHoursType == "waiting" ? "عدد ساعات الانتظار" : selectedHoursType == "overtime" ? "عدد الساعات الإضافية" : "",
-                      ),
-                      rightIcon: const Icon(Icons.access_time),
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == "عدد ساعات الانتظار") {
-                            selectedHoursType = "waiting";
-                            _controllers["overtimeHours"]?.clear();
-                            _controllers["waitingHours"]?.text = _calculateDiffFromEndTime();
-                          } else if (value == "عدد الساعات الإضافية") {
-                            selectedHoursType = "overtime";
-                            _controllers["waitingHours"]?.clear();
-                            _controllers["overtimeHours"]?.text = _calculateDiffFromEndTime();
-                          }
-                          state.didChange(value);
-                        });
-                      },
+        content: StatefulBuilder(
+          builder: (context, setStepState) {
 
-                    ),
-                    if (state.hasError)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5, right: 20),
-                        child: Text(state.errorText!, style: const TextStyle(color: Colors.red, fontFamily: 'Tajawal', fontSize: 12)),
-                      ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 15),
-            if (selectedHoursType != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    selectedHoursType == "waiting" ? "عدد ساعات الانتظار" : "عدد الساعات الإضافية",
-                    style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 5),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("بداية الدوام",
+                    style: TextStyle(
+                        fontFamily: 'Tajawal',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey)),
+                const SizedBox(height: 5),
+                NewRoundTextField(
+                  hintText: "بداية الدوام",
+                  controller: _controllers["startTime"],
+                  right: const Icon(Icons.login),
+                  readOnly: true,
+                ),
+                const SizedBox(height: 12),
+                const Text("نهاية الدوام",
+                    style: TextStyle(
+                        fontFamily: 'Tajawal',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey)),
+                const SizedBox(height: 5),
+                NewRoundTextField(
+                  hintText: "نهاية الدوام",
+                  controller: _controllers["endTime"],
+                  right: const Icon(Icons.logout),
+                  readOnly: true,
+                ),
+                const SizedBox(height: 12),
+                const Text("نوع الساعات",
+                    style: TextStyle(
+                        fontFamily: 'Tajawal',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey)),
+                const SizedBox(height: 5),
+                FormField<String>(
+                  validator: (_) =>
+                  (selectedHoursType == null) ? "الرجاء اختيار نوع الساعات" : null,
+                  builder: (state) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        NewRoundSelectField(
+                          hintText: "اختيار نوع الساعات",
+                          options: const ["عدد ساعات الانتظار", "عدد الساعات الإضافية"],
+                          controller: TextEditingController(
+                            text: selectedHoursType == "waiting"
+                                ? "عدد ساعات الانتظار"
+                                : selectedHoursType == "overtime"
+                                ? "عدد الساعات الإضافية"
+                                : "",
+                          ),
+                          rightIcon: const Icon(Icons.access_time),
+                          onChanged: (value) {
+                            final now = DateTime.now();
+
+                            final endParts = _controllers["endTime"]!.text.split(":");
+                            if (endParts.length != 2) return;
+
+                            final endTime = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              int.parse(endParts[0]),
+                              int.parse(endParts[1]),
+                            );
+
+                            if (now.isBefore(endTime)) {
+
+                              setState(() {
+                                hoursErrorMessage = "الوقت المحدد للإنصراف لم يحن بعد";
+                              });
+                              return;
+                            }
+
+                            setState(() {
+                              hoursErrorMessage = null;
+                              selectedHoursType = value == "عدد ساعات الانتظار" ? "waiting" : "overtime";
+
+                              final diff = _calculateDiffFromNowToEndTime();
+
+                              _controllers[selectedHoursType == "waiting"
+                                  ? "waitingHours"
+                                  : "overtimeHours"]!
+                                  .text = "$diff ";
+
+                              _startHoursTimer();
+                              state.didChange(value);
+                            });
+                          },
+                        ),
+                        if (hoursErrorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5, right: 20),
+                            child: Text(
+                              hoursErrorMessage!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontFamily: 'Tajawal',
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+
+                        if (state.hasError)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5, right: 20),
+                            child: Text(
+                              state.errorText!,
+                              style: const TextStyle(
+                                  color: Colors.red,
+                                  fontFamily: 'Tajawal',
+                                  fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 15),
+                if (selectedHoursType != null)
                   NewRoundTextField(
-                    hintText: selectedHoursType == "waiting" ? "عدد ساعات الانتظار" : "عدد الساعات الإضافية",
-                    controller: _controllers[selectedHoursType == "waiting" ? "waitingHours" : "overtimeHours"],
-                    keyboardType: TextInputType.number,
+                    hintText: selectedHoursType == "waiting"
+                        ? "عدد ساعات الانتظار"
+                        : "عدد الساعات الإضافية",
+                    controller: _controllers[selectedHoursType == "waiting"
+                        ? "waitingHours"
+                        : "overtimeHours"],
                     right: const Icon(Icons.access_time_filled),
                     readOnly: true,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return "مطلوب";
-                      final regex = RegExp(r'^\d{1,2}:\d{2}$');
-                      if (!regex.hasMatch(v)) return "الرجاء إدخال الوقت بصيغة hh:mm";
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 15),
-                  const Text(
-                    "ملاحظات",
-                    style: TextStyle(
-                      fontFamily: 'Tajawal',
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  NewRoundTextField(
-                    hintText: "أدخل الملاحظات (اختياري)",
-                    controller: _controllers["notes"],
-                    maxLines: 3,
-                    right: const Icon(Icons.notes),
-                    minLines: 1,
-                  ),
-                ],
-              ),
-          ],
+              ],
+            );
+          },
         ),
       ),
+
+
+
+
+
       Step(
         title: const Text("العميل والتوقيع"),
         isActive: _currentStep >= 2,
         content: SizedBox(height: 400, child: _buildSignatureSection()),
       ),
     ];
-  }
-
-  int? _timeToMinutes(String? value) {
-    if (value == null || value.isEmpty) return null;
-
-    final parts = value.split(":");
-    if (parts.length != 2) return null;
-
-    final hours = int.tryParse(parts[0]);
-    final minutes = int.tryParse(parts[1]);
-
-    if (hours == null || minutes == null) return null;
-
-    return hours * 60 + minutes;
   }
 
   @override
@@ -412,7 +509,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                         try {
                           bool stepValid = true;
 
-                          // نفس التحقق متاعك
+                          // Vérification du step actuel
                           if (_currentStep == 0) {
                             if ((_controllers["employeeName"]?.text.trim().isEmpty ?? true) ||
                                 (customerCtrl.text.trim().isEmpty)) {
@@ -436,6 +533,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             return;
                           }
 
+                          // Passer au step suivant si ce n'est pas le dernier
                           if (_currentStep < _buildSteps().length - 1) {
                             setState(() {
                               _currentStep++;
@@ -444,7 +542,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             return;
                           }
 
-                          // 🔹 رفع التوقيع
+                          // 🔹 Charger le signature
                           String? signatureUrl;
                           if (!_signatureController.isEmpty) {
                             final bytes = await _signatureController.toPngBytes();
@@ -453,14 +551,21 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             }
                           }
 
-                          final waitingMinutes = selectedHoursType == "waiting"
-                              ? _timeToMinutes(_controllers["waitingHours"]?.text.trim())
+                          // 🔹 Calculer les heures en décimal
+                          final decimalHours = double.tryParse(
+                            _calculateDiffFromStartToEndDecimal().replaceAll(',', '.'),
+                          ) ??
+                              0.0;
+
+                          final waitingHours = selectedHoursType == "waiting"
+                              ? _controllers["waitingHours"]!.text.trim()
                               : null;
 
-                          final overtimeMinutes = selectedHoursType == "overtime"
-                              ? _timeToMinutes(_controllers["overtimeHours"]?.text.trim())
+                          final overtimeHours = selectedHoursType == "overtime"
+                              ? _controllers["overtimeHours"]!.text.trim()
                               : null;
 
+                          // 🔹 Créer l'objet Attendance
                           final attendance = Attendance(
                             employeeId: widget.employeeId,
                             employeeName: _controllers["employeeName"]?.text.trim(),
@@ -468,13 +573,14 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                                 "${_controllers["date"]?.text} ${_controllers["startTime"]?.text}"),
                             endTime: DateTime.tryParse(
                                 "${_controllers["date"]?.text} ${_controllers["endTime"]?.text}"),
-                            waitingHours: waitingMinutes?.toDouble(),
-                            overtimeHours: overtimeMinutes?.toDouble(),
+                            waitingHours: waitingHours,
+                            overtimeHours: overtimeHours,
                             customerName: customerCtrl.text.trim(),
                             signatureUrl: signatureUrl,
                             notes: _controllers["notes"]?.text.trim(),
                           );
 
+                          // 🔹 Ajouter dans Firebase
                           final result =
                           await sl<AddAttendanceUseCase>().call(params: attendance);
 
@@ -497,9 +603,11 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             },
                           );
                         } catch (e) {
+                          debugPrint("Erreur onPressed: $e");
                           setState(() => _isSubmitting = false);
                         }
                       },
+
 
 
                       child: _isSubmitting

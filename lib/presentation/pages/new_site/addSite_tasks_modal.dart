@@ -1,11 +1,14 @@
 
-import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/TaskItem.dart';
+import 'package:app_bhb/data/auth/models/newsite_model.dart';
+import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/data/auth/models/site_task_model.dart';
 import 'package:app_bhb/data/auth/source/newSite_firebase_service.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +20,10 @@ import '../../../service_locator.dart';
 
 class AddSiteTasksModal extends StatefulWidget {
   final String siteId;
+  final NewSite site;
   final void Function(List<SiteTask>, String generalRemark) onSubmit;
 
-  const AddSiteTasksModal({super.key, required this.onSubmit,required this.siteId,});
+  const AddSiteTasksModal({super.key, required this.onSubmit,required this.siteId,required this.site,});
 
   @override
   State<AddSiteTasksModal> createState() => _AddSiteTasksModalState();
@@ -29,7 +33,33 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
   final SiteTask task = SiteTask(items: []);
   final TextEditingController generalRemarkCtrl = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
+  @override
+  void initState() {
+    super.initState();
+    _createNotificationUseCase = sl<CreateNotificationUseCase>();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  }
+
+  Future<void> _sendNotification({
+    required String title,
+    required String message,
+    String? route,
+    String? userId,
+  }) async {
+    final notif = NotificationsModel(
+      title: title,
+      message: message,
+      createdAt: DateTime.now(),
+      userId: userId,
+      route: route,
+      isRead: false,
+    );
+
+    await _createNotificationUseCase.call(notification: notif);
+  }
   // ===== Pick Image with Camera or Gallery =====
   Future<void> _pickImage() async {
     showModalBottomSheet(
@@ -70,24 +100,45 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
   }
 
   Future<void> _uploadAndAddImage(XFile pickedFile) async {
-    final fileName = "site_tasks/${DateTime.now().millisecondsSinceEpoch}_${path.basename(pickedFile.path)}";
-    final storageRef = FirebaseStorage.instance.ref(fileName);
-
-    String imageUrl;
-    if (kIsWeb) {
-      final bytes = await pickedFile.readAsBytes();
-      final uploadTask = await storageRef.putData(bytes);
-      imageUrl = await uploadTask.ref.getDownloadURL();
-    } else {
-      final file = File(pickedFile.path);
-      final uploadTask = await storageRef.putFile(file);
-      imageUrl = await uploadTask.ref.getDownloadURL();
-    }
+    // Créer un item temporaire avec l'image locale
+    final tempItem = TaskItem(
+      imageUrl: pickedFile.path, // utiliser le chemin local pour l'affichage immédiat
+      remark: "",
+      isUploading: true, // marqueur pour savoir que c'est en cours d'upload
+    );
 
     setState(() {
-      task.items.add(TaskItem(imageUrl: imageUrl, remark: ""));
+      task.items.add(tempItem);
     });
+
+    try {
+      final fileName = "site_tasks/${DateTime.now().millisecondsSinceEpoch}_${path.basename(pickedFile.path)}";
+      final storageRef = FirebaseStorage.instance.ref(fileName);
+
+      String uploadedUrl;
+      if (kIsWeb) {
+        final bytes = await pickedFile.readAsBytes();
+        final uploadTask = await storageRef.putData(bytes);
+        uploadedUrl = await uploadTask.ref.getDownloadURL();
+      } else {
+        final file = File(pickedFile.path);
+        final uploadTask = await storageRef.putFile(file);
+        uploadedUrl = await uploadTask.ref.getDownloadURL();
+      }
+
+      // Remplacer l'image locale par l'URL Firebase
+      setState(() {
+        tempItem.imageUrl = uploadedUrl;
+        tempItem.isUploading = false;
+      });
+    } catch (e) {
+      setState(() {
+        task.items.remove(tempItem);
+      });
+      CustomSnackBar.show(context, message: "خطأ في تحميل الصورة", type: SnackBarType.error);
+    }
   }
+
 
   // ===== Build the Images + Remarks widget for GenericFormModal =====
   Widget _imagesWithRemarksWidget() {
@@ -97,7 +148,6 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
     for (int i = 0; i < task.items.length; i++) {
       final item = task.items[i];
 
-      // Image avec X pour supprimer
       widgets.add(Stack(
         children: [
           Container(
@@ -106,11 +156,19 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
             margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(15),
-              image: DecorationImage(
-                image: NetworkImage(item.imageUrl),
+              image: item.isUploading
+                  ? null
+                  : DecorationImage(
+                image: item.imageUrl.startsWith("http")
+                    ? NetworkImage(item.imageUrl)
+                    : FileImage(File(item.imageUrl)) as ImageProvider,
                 fit: BoxFit.cover,
               ),
+              color: item.isUploading ? Colors.grey.shade300 : null,
             ),
+            child: item.isUploading
+                ? const Center(child: CircularProgressIndicator())
+                : null,
           ),
           Positioned(
             top: 4,
@@ -123,7 +181,6 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
         ],
       ));
 
-      // Champ de remarque sous l'image
       widgets.add(Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: NewRoundTextField(
@@ -133,7 +190,7 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
       ));
     }
 
-    // Bouton Ajouter Image au-dessus du dernier champ de remarque
+    // Bouton Ajouter Image
     widgets.add(GestureDetector(
       onTap: _pickImage,
       child: Container(
@@ -154,6 +211,7 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return GenericFormModal(
@@ -166,8 +224,16 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
 
         result.fold(
               (failure) => CustomSnackBar.show(context, message: failure.toString(), type: SnackBarType.error),
-              (_) {
+              (success) {
             CustomSnackBar.show(context, message: "تمت إضافة المهام بنجاح.", type: SnackBarType.success);
+            final customerName = widget.site.customerName ?? "غير معروف";
+
+            _sendNotification(
+              title: "إضافة المهام للموقع الجديد",
+              message: "تم إضافة المهام للموقع الجديد للعميل : $customerName",
+              route: "/home",
+              userId: currentUserId,
+            );
             Navigator.pop(context);
           },
         );

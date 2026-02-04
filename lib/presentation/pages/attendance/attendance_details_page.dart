@@ -7,9 +7,6 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_attendance.dart';
 import 'package:app_bhb/presentation/pages/attendance/generate_pdf_attendance.dart';
 import 'package:flutter/material.dart';
 import '../../../service_locator.dart';
-import 'package:printing/printing.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 
 class AttendanceDetailsPage extends StatefulWidget {
@@ -247,28 +244,30 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
 
                                 // Waiting & Overtime
                                 // Waiting & Overtime
-                                if (a.waitingHours != null)
+                                if (a.waitingHours != null && a.waitingHours!.isNotEmpty)
                                   Row(
                                     children: [
                                       const Icon(Icons.timer, size: 20, color: Colors.blue),
                                       const SizedBox(width: 5),
                                       Text(
-                                        "عدد ساعات الانتظار: ${formatMinutesToHours(a.waitingHours)} ساعة",
+                                        "عدد ساعات الانتظار: ${a.waitingHours!}",
                                         style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
                                       ),
                                     ],
                                   ),
-                                if (a.overtimeHours != null)
+
+                                if (a.overtimeHours != null && a.overtimeHours!.isNotEmpty)
                                   Row(
                                     children: [
                                       const Icon(Icons.timer, size: 20, color: Colors.blue),
                                       const SizedBox(width: 5),
                                       Text(
-                                        "عدد الساعات الإضافية: ${formatMinutesToHours(a.overtimeHours)} ساعة",
+                                        "عدد الساعات الإضافية: ${a.overtimeHours!}",
                                         style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
                                       ),
                                     ],
                                   ),
+
 
                                 const SizedBox(height: 10),
 
