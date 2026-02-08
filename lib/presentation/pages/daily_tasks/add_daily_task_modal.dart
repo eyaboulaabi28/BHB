@@ -8,6 +8,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_daily_tasks.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_projects.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
@@ -33,6 +34,7 @@ class _AddDailyTaskModalState extends State<AddDailyTaskModal> {
    // Data
    List<Engineer> engineers = [];
    List<Project> projects = [];
+  late String? currentUserId;
 
   final TextEditingController dateCtrl = TextEditingController();
   final TextEditingController titleCtrl = TextEditingController();
@@ -97,6 +99,8 @@ class _AddDailyTaskModalState extends State<AddDailyTaskModal> {
     _loadEngineers();
     _loadProjects();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
   }
 
   Future<void> _loadEngineers() async {
@@ -324,7 +328,7 @@ class _AddDailyTaskModalState extends State<AddDailyTaskModal> {
                                 await _sendNotification(
                                   title: "مهمة جديدة",
                                   message: "تم إسناد مهمة جديدة إليك: ${titleCtrl.text}",
-                                  userId: selectedEngineer.id,
+                                  userId: currentUserId,
                                   route: "/home",
                                 );
                                 // 🟢 Attendre un peu pour laisser la liste parent se rafraîchir

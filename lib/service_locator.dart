@@ -333,7 +333,7 @@ Future<void> initializeDependencies () async {
   sl.registerLazySingleton<SendContactMessageUseCase>(() => SendContactMessageUseCase(sl()));
   // UseCases Notification
   sl.registerSingleton<CreateNotificationUseCase>(CreateNotificationUseCase());
-  sl.registerSingleton<GetNotificationUseCase>(GetNotificationUseCase());
+  sl.registerSingleton<GetNotificationUseCase>(GetNotificationUseCase(sl<NotificationRepository>()));
   sl.registerSingleton<GetNotificationUseCase1>(GetNotificationUseCase1());
   sl.registerSingleton<MarkNotificationAsReadUseCase>(MarkNotificationAsReadUseCase());
   sl.registerSingleton<GetUnreadNotificationCountUseCase>(GetUnreadNotificationCountUseCase());

@@ -8,6 +8,7 @@ import 'package:app_bhb/data/auth/models/customers_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_customers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../service_locator.dart';
@@ -51,6 +52,7 @@ class _AddDateModalState extends State<AddDateModal> {
   bool _isSubmitting = false;
   List<Customers> customers = [];
   String? selectedCustomerId;
+  late String? currentUserId;
 
   late final List<FormFieldConfig> fields;
   late final Map<String, TextEditingController> _controllers;
@@ -69,7 +71,7 @@ class _AddDateModalState extends State<AddDateModal> {
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
     _loadCustomers();
     statusCtrl.text = statusToText(selectedStatus);
-
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
     fields = [
       FormFieldConfig(
         key: "date",
@@ -305,7 +307,7 @@ class _AddDateModalState extends State<AddDateModal> {
                                     title: "موعد جديد",
                                     message:
                                     "تم إضافة موعد جديد مع العميل: ${customerCtrl.text.trim()}",
-                                    userId: docId is String ? docId : null,
+                                    userId: currentUserId,
                                     route: "/home",
                                   );
 

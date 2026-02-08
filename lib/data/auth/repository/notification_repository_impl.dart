@@ -11,11 +11,7 @@ class NotificationRepositoryImpl extends NotificationRepository {
   Future<void> createNotification(NotificationsModel notification) async {
     return await sl<NotificationFirebaseService>().createNotification(notification);
   }
-  @override
-  Future<Either> getAllNotifications() async {
-    return await sl<NotificationFirebaseService>().getAllNotifications();
 
-  }
   @override
   Future<void> markAsRead(String id) async {
     return await sl<NotificationFirebaseService>().markAsRead(id);
@@ -29,5 +25,10 @@ class NotificationRepositoryImpl extends NotificationRepository {
   @override
   Future<Either> getAllNotifications1({required String userId, required String role}) async{
     return await sl<NotificationFirebaseService>().getAllNotifications1(userId: userId, role: role);
+  }
+
+  @override
+  Future<Either> getAllNotifications({required String role}) async{
+    return await sl<NotificationFirebaseService>().getAllNotifications(role: role);
   }
 }

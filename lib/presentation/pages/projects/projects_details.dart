@@ -1,6 +1,8 @@
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/custom_bottom_nav.dart';
+import 'package:app_bhb/data/auth/models/customers_model.dart';
+import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
 import 'package:app_bhb/data/auth/source/notification_service.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
@@ -13,6 +15,7 @@ import 'package:app_bhb/presentation/pages/projects/project_employees.dart';
 import 'package:app_bhb/presentation/pages/projects/project_operational_tests.dart';
 import 'package:app_bhb/presentation/pages/projects/project_request_materials.dart';
 import 'package:app_bhb/presentation/pages/projects/project_stages_section.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -35,16 +38,18 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
   int _currentStep = 0;
   Project? _project;
   bool _isLoading = true;
+  String? _ownerId;
 
   late final GetProjectByIdUseCase _getProjectByIdUseCase;
   late final NotificationService _notificationService;
-
+  late final CreateNotificationUseCase _createNotificationUseCase;
   @override
   void initState() {
     super.initState();
     _getProjectByIdUseCase = sl<GetProjectByIdUseCase>();
     _fetchProjectDetails();
     _notificationService = NotificationService(sl<CreateNotificationUseCase>());
+    _createNotificationUseCase = sl<CreateNotificationUseCase>();
 
   }
 
@@ -65,9 +70,69 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
           _project = project;
           _isLoading = false;
         });
-      },
+        _printOwnerInfo();
+
+          },
     );
   }
+
+
+  Future<void> _printOwnerInfo() async {
+    if (_project == null || _project!.ownerName == null) {
+      debugPrint("❌ Aucun owner pour ce projet");
+      return;
+    }
+
+    final ownerName = _project!.ownerName!.trim(); // ✅ مهم جدًا
+
+    debugPrint("🔍 Searching ownerName = [$ownerName]");
+
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('firstName', isEqualTo: ownerName)
+          .get();
+
+      debugPrint("📦 Docs found: ${query.docs.length}");
+
+      if (query.docs.isEmpty) {
+        debugPrint("❌ Aucun customer trouvé pour [$ownerName]");
+        return;
+      }
+
+      for (final doc in query.docs) {
+        final customer = Customers.fromMap(doc.id, doc.data());
+        debugPrint("✅ OWNER FOUND");
+        debugPrint("🧑 Nom owner : ${customer.firstName}");
+        debugPrint("🆔 ID owner : ${customer.id}");
+        _ownerId = customer.id;
+      }
+    } catch (e) {
+      debugPrint("🔥 Erreur récupération owner : $e");
+    }
+  }
+
+
+  Future<void> _sendNotification({
+    required String title,
+    required String message,
+    String? userId,
+    String? route,
+    String? targetRole,
+  }) async {
+    final notif = NotificationsModel(
+        title: title,
+        message: message,
+        userId: userId,
+        route: route,
+        createdAt: DateTime.now(),
+        isRead: false,
+        targetRole: targetRole
+    );
+
+    await _createNotificationUseCase(notification: notif);
+  }
+
 
   void _onBottomNavTapped(int index) {
     setState(() {
@@ -107,9 +172,6 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
     }
   }
 
-
-
-
   void _makeWhatsappCall() async {
     final phone = _project?.phoneNumber ?? '';
 
@@ -139,7 +201,6 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       );
     }
   }
-
 
   String normalizePhone(String phone) {
     var cleaned = phone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -178,6 +239,7 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
                   message: "فشل تحديث المشروع: $error",
                   type: SnackBarType.error,
                 );
+
                 return false;
               },
                   (_) {
@@ -187,6 +249,13 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
                   rootContext, // ✅ مهم جدًا
                   message: "تم تحديث المشروع بنجاح",
                   type: SnackBarType.success,
+                );
+                _sendNotification(
+                  title: "مهمة جديدة",
+                  message: "تم تحديث المشروع بنجاح",
+                  route: "/home",
+                  userId: _ownerId,
+                  targetRole: "customer",
                 );
                 return true;
               },
@@ -214,17 +283,17 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
         );
 
       case 1:
-        return ProjectStagesSection(projectId: widget.projectId,projectName:widget.projectName,);
+        return ProjectStagesSection(projectId: widget.projectId,projectName:widget.projectName,ownerId: _ownerId);
       case 2:
-        return ProjectOperationalsTest(projectId: widget.projectId);
+        return ProjectOperationalsTest(projectId: widget.projectId,ownerId: _ownerId);
       case 3:
         return ProjectRequestMaterials(projectId: widget.projectId);
       case 4:
         return ProjectEmployees(projectId: widget.projectId);
       case 5:
-        return ProjectAttachments(projectId: widget.projectId);
+        return ProjectAttachments(projectId: widget.projectId,ownerId: _ownerId);
       case 6:
-        return ProjectComments(projectId: widget.projectId);
+        return ProjectComments(projectId: widget.projectId,ownerId: _ownerId);
       default:
         return const SizedBox();
     }

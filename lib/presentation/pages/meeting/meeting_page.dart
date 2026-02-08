@@ -42,6 +42,8 @@ class _MeetingPageState extends State<MeetingPage> {
   final TextEditingController _searchController = TextEditingController();
   List<String>? images;
 
+
+
   @override
   void initState() {
     super.initState();

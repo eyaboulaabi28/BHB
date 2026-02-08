@@ -9,6 +9,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_customers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/add_customer_modal.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart' as generic_modal; // supprime ou alias l'autre import si nécessaire
 import 'package:geocoding/geocoding.dart';
@@ -17,7 +18,6 @@ import '../../../service_locator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 
 class CustomersPage extends StatefulWidget {
@@ -37,6 +37,7 @@ class _CustomersPageState extends State<CustomersPage> {
   late final GetCustomerUseCase _getAllCustomerUseCase;
   late final DeleteCustomerUseCase _deleteCustomerUseCase;
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   List<Customers> customers = [];
   List<Customers> filteredCustomers = [];
@@ -51,6 +52,8 @@ class _CustomersPageState extends State<CustomersPage> {
     _getAllCustomerUseCase = sl<GetCustomerUseCase>();
     _deleteCustomerUseCase = sl<DeleteCustomerUseCase>();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     _fetchCustomers();
   }
   Future<void> _sendNotification({
@@ -58,6 +61,7 @@ class _CustomersPageState extends State<CustomersPage> {
     required String message,
     String? route,
     String? userId,
+    String? targetRole,
   }) async {
     final notif = NotificationsModel(
       title: title,
@@ -65,6 +69,7 @@ class _CustomersPageState extends State<CustomersPage> {
       createdAt: DateTime.now(),
       userId: userId,
       route: route,
+      targetRole: targetRole,
       isRead: false,
     );
 
@@ -120,18 +125,25 @@ class _CustomersPageState extends State<CustomersPage> {
           customers.removeWhere((e) => e.id == customerId);
         });
 
-        CustomSnackBar.show(
-          context,
-          message: "تم حذف العميل بنجاح",
-          type: SnackBarType.success,
-        );
+        // إرسال إشعار للعميل نفسه
          _sendNotification(
         title: "حذف عميل",
         message: "تم حذف العميل: ${deletedCustomer.firstName ?? ""}",
         route: "/home",
-        userId: customerId,
+        targetRole: "customer",
+        userId: deletedCustomer.id,  // الإشعار يذهب لهذا العميل فقط
         );
-      },
+
+        // إرسال إشعار للـ admin
+             _sendNotification(
+            title: "حذف عميل",
+            message: "تم حذف العميل: ${deletedCustomer.firstName ?? ""}",
+            route: "/home",
+            targetRole: "admin",
+            userId: null,  // كل الـ admin سيرونه
+            );
+
+          },
     );
   }
 
@@ -367,32 +379,25 @@ class _CustomersPageState extends State<CustomersPage> {
                                         key: "name",
                                         hint: "اسم العميل",
                                         icon: const Icon(Icons.person, color: Colors.grey),
-                                        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال الاسم" : null,
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "email",
                                         hint: "البريد الإلكتروني",
                                         icon: const Icon(Icons.email, color: Colors.grey),
                                         keyboardType: TextInputType.emailAddress,
-                                        validator: (v) {
-                                          if (v == null || v.isEmpty) return "الرجاء إدخال البريد الإلكتروني";
-                                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return "البريد الإلكتروني غير صالح";
-                                          return null;
-                                        },
+
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "phone",
                                         hint: "رقم العميل",
                                         icon: const Icon(Icons.phone, color: Colors.grey),
                                         keyboardType: TextInputType.phone,
-                                        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال رقم العميل" : null,
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "type",
                                         hint: "نوع العميل",
                                         icon: const Icon(Icons.category, color: Colors.grey),
                                         options: ["فردي", "شركة"],
-                                        validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار نوع العميل" : null,
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "location",
@@ -473,7 +478,15 @@ class _CustomersPageState extends State<CustomersPage> {
                                                   title: "تحديث بيانات عميل",
                                                   message: "تم تعديل بيانات العميل: ${values["name"]}",
                                                   route: "/home",
-                                                  userId: customer.id,
+                                                  targetRole: "customer",
+                                                  userId: customer.id
+                                                );
+                                                _sendNotification(
+                                                  title: "تحديث بيانات عميل",
+                                                  message: "تم تعديل بيانات العميل: ${values["name"]}",
+                                                  route: "/home",
+                                                  targetRole: "admin",
+                                                  userId: null
                                                 );
 
                                                 Navigator.of(context).pop();

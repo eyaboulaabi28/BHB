@@ -14,8 +14,12 @@ class DateRepositoryImpl extends DateRepository {
   }
 
   @override
-  Future<Either> getAllDate() async {
-    return await sl<DateFirebaseService>().getAllDate();
+  Future<Either> getAllDate({
+    required String userId,
+    required String role,
+  }) async {
+    return await sl<DateFirebaseService>()
+        .getAllDate(userId: userId, role: role);
   }
 
   @override

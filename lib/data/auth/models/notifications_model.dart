@@ -6,6 +6,7 @@ class NotificationsModel {
   final String? route;
   bool isRead;
   String? id;
+  String? targetRole;
 
   NotificationsModel({
     required this.title,
@@ -15,6 +16,7 @@ class NotificationsModel {
     this.route,
     this.id,
     this.isRead = false,
+    this.targetRole,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class NotificationsModel {
       'route': route,
       'id': id,
       'isRead': isRead,
+      'targetRole': targetRole,
     };
   }
 
@@ -37,6 +40,7 @@ class NotificationsModel {
       createdAt: DateTime.parse(map['createdAt']),
       userId: map['userId'],
       route: map['route'],
+      targetRole: map['targetRole'],
       isRead: map['isRead'] ?? false,
     );
   }

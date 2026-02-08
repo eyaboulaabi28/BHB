@@ -11,6 +11,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_employees.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
 import 'package:app_bhb/presentation/pages/employees/add_employee_modal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart' as generic_modal;
@@ -38,6 +39,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
   late final GetEmployeeUseCase _getAllEmployeeUseCase;
   late final DeleteEmployeerUseCase _deleteEmployeeUseCase;
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   List<Employees> employees = [];
   List<Employees> filteredEmployees = [];
@@ -51,6 +53,8 @@ class _EmployeesPageState extends State<EmployeesPage> {
     _deleteEmployeeUseCase = sl<DeleteEmployeerUseCase>();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
     _fetchEmployees();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
   }
 
   Future<void> _sendNotification({
@@ -133,7 +137,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
           title: "حذف موظف",
           message: "تم حذف موظف من النظام: ${deletedEmployee.firstName ?? ""}",
           route: "/home",
-          userId: employeeId,
+          userId: currentUserId,
         );
       },
     );
@@ -449,7 +453,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
                                                   title: "تعديل موظف",
                                                   message: "تم تعديل بيانات الموظف: ${updatedEmployee.firstName}",
                                                   route: "/home",
-                                                  userId: updatedEmployee.id,
+                                                  userId: currentUserId,
                                                 );
 
                                                 Navigator.of(context).pop();

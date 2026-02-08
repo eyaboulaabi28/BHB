@@ -1,23 +1,20 @@
-import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
-import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/employees_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_employees.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../service_locator.dart';
 
 class AddEmployeeModal extends StatefulWidget {
   final void Function(Map<String, dynamic>) onAdd;
   final String title;
   final String submitButtonText;
-  final String? projectId; // si vous voulez lier l'employé à un projet
+  final String? projectId;
 
   const AddEmployeeModal({
     super.key,
@@ -34,6 +31,7 @@ class AddEmployeeModal extends StatefulWidget {
 class _AddEmployeeModalState extends State<AddEmployeeModal> {
   final _formKey = GlobalKey<FormState>();
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   // Champs dynamiques pour ce formulaire
   late final List<FormFieldConfig> fields;
@@ -46,6 +44,7 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
   void initState() {
     super.initState();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     fields = [
       FormFieldConfig(
@@ -219,7 +218,7 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
               await _sendNotification(
                 title: "موظف جديد",
                 message: "تم إضافة موظف جديد: ${values["name"].trim()}",
-                userId: success,
+                userId: currentUserId,
                 route: "/home",
               );
 

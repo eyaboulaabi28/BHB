@@ -8,6 +8,7 @@ import 'package:app_bhb/data/auth/models/date_model.dart';
 import 'package:app_bhb/data/auth/models/engineers_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
+import 'package:app_bhb/data/auth/source/auth_firebase_service.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_daily_tasks.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_date.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
@@ -15,6 +16,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_projects.dart';
 import 'package:app_bhb/presentation/pages/daily_tasks/add_daily_task_modal.dart';
 import 'package:app_bhb/presentation/pages/dates/add_date_modal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter/material.dart';
 
@@ -37,6 +39,7 @@ class _DatesPageState extends State<DatesPage> {
   List<Date> date = [];
   late final GetDateUseCase _getAllDateUseCase;
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   String _statusText(DateStatus status) {
     switch (status) {
@@ -77,7 +80,7 @@ class _DatesPageState extends State<DatesPage> {
     super.initState();
     _getAllDateUseCase = sl<GetDateUseCase>();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
-
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
     _fetchDates();
   }
   Future<void> _reloadDates() async {
@@ -104,49 +107,42 @@ class _DatesPageState extends State<DatesPage> {
   }
 
   Future<void> _fetchDates() async {
-    final result = await _getAllDateUseCase.call();
+    final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    result.fold(
-          (_) {
+    final userProfile =
+    await sl<AuthFirebaseService>().getUserProfile(uid);
+
+    userProfile.fold(
+          (err) {
         CustomSnackBar.show(
           context,
-          message: "خطأ أثناء جلب المواعيد",
+          message: "خطأ في جلب المستخدم",
           type: SnackBarType.error,
         );
       },
-          (list) async {
-        List<Date> updatedList = [];
+          (data) async {
+        final role = data['role'];
 
-        for (final d in list) {
-          final newStatus = calculateAutoStatus(d);
+        final result = await _getAllDateUseCase.call(
+          userId: uid,
+          role: role,
+        );
 
-          if (newStatus != d.status) {
-            final updatedDate = Date(
-              id: d.id,
-              customerName: d.customerName,
-              uidCustomer: d.uidCustomer,
-              createdAt: d.createdAt,
-              status: newStatus,
+        result.fold(
+              (_) {
+            CustomSnackBar.show(
+              context,
+              message: "خطأ أثناء جلب المواعيد",
+              type: SnackBarType.error,
             );
-
-            // 🔥 تحديث Firebase
-            await sl<UpdateDateUseCase>().call(
-              params: {
-                "id": d.id!,
-                "date": updatedDate,
-              },
-            );
-
-            updatedList.add(updatedDate);
-          } else {
-            updatedList.add(d);
-          }
-        }
-
-        setState(() {
-          date = updatedList;
-          isLoading = false;
-        });
+          },
+              (list) {
+            setState(() {
+              date = List<Date>.from(list);
+              isLoading = false;
+            });
+          },
+        );
       },
     );
   }
@@ -454,7 +450,7 @@ class _DatesPageState extends State<DatesPage> {
                                                           title: "تعديل موعد",
                                                           message: "تم تعديل موعد العميل: ${updatedDate.customerName}",
                                                           route: "/home",
-                                                          userId: updatedDate.id,
+                                                          userId: currentUserId,
                                                           );
 
                                                           Navigator.pop(context);

@@ -10,7 +10,10 @@ import 'package:flutter/cupertino.dart';
 
 abstract class DateFirebaseService {
   Future<Either> addDate(Date date);
-  Future<Either> getAllDate();
+  Future<Either> getAllDate({
+    required String userId,
+    required String role,
+  });
   Future<Either> getDateById(String id);
   Future<Either> updateDate(String id, Date date);
 
@@ -32,17 +35,33 @@ class DateFirebaseServiceImpl extends DateFirebaseService {
 
 
   @override
-  Future<Either> getAllDate() async{
+  Future<Either> getAllDate({
+    required String userId,
+    required String role,
+  }) async {
     try {
-      final snapshot = await _datesCollection.get();
-      final date = snapshot.docs
-          .map((doc) => Date.fromMap(doc.id, doc.data()))
+      Query query = _firestore.collection('dates');
+
+      // 👇 customer يشوف غير متاعو
+      if (role == "customer") {
+        query = query.where('uidCustomer', isEqualTo: userId);
+      }
+
+      final snapshot = await query.get();
+
+      final dates = snapshot.docs
+          .map((doc) => Date.fromMap(
+        doc.id,
+        doc.data() as Map<String, dynamic>,
+      ))
           .toList();
-      return Right(date);
+
+      return Right(dates);
     } catch (e) {
       return Left(e.toString());
     }
   }
+
 
   @override
   Future<Either> getDateById(String id) async {

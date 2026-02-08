@@ -24,12 +24,14 @@ class AddTaskDialog extends StatefulWidget {
   final VoidCallback? onTaskAdded;
   final String? projectId;
   final String projectName;
+  final String? ownerId;
   const AddTaskDialog({
     super.key,
     required this.subStage,
     required this.projectId,
     this.onTaskAdded,
     required this.projectName,
+    required this.ownerId,
   });
 
   @override
@@ -270,6 +272,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     required String message,
     String? userId,
     String? route,
+    String? targetRole,
   }) async {
     final notif = NotificationsModel(
       title: title,
@@ -278,6 +281,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       route: route,
       createdAt: DateTime.now(),
       isRead: false,
+      targetRole: targetRole
     );
 
     await _createNotificationUseCase(notification: notif);
@@ -345,11 +349,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           "المشروع: ${widget.projectName}\n"
           "المرحلة: ${widget.subStage.stageId}\n"
           "المهمة الفرعية: ${widget.subStage.subStageName}";
+
       await _sendNotification(
         title: "مهمة جديدة",
         message: notifMessage,
-        userId: currentUserId,
         route: "/home",
+        userId: widget.ownerId,
+        targetRole: "customer",
       );
       widget.onTaskAdded?.call();
 

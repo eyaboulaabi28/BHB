@@ -53,19 +53,6 @@ class _AttendancePageState extends State<AttendancePage> {
     _fetchEmployees();
   }
 
-  Future<void> _sendNotification({required String title, required String message, String? route, String? userId,}) async {
-    final notif = NotificationsModel(
-      title: title,
-      message: message,
-      createdAt: DateTime.now(),
-      userId: userId,
-      route: route,
-      isRead: false,
-    );
-
-    await _createNotificationUseCase.call(notification: notif);
-  }
-
   Future<void> _fetchEmployees() async {
     final result = await _getAllEmployeeUseCase.call();
 

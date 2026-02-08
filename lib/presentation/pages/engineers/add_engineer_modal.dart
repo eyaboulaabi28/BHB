@@ -7,6 +7,7 @@ import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -32,6 +33,7 @@ class AddEngineerModal extends StatefulWidget {
 class _AddEngineerModalState extends State<AddEngineerModal> {
   final _formKey = GlobalKey<FormState>();
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   // Champs dynamiques
   late final List<FormFieldConfig> fields;
@@ -43,6 +45,8 @@ class _AddEngineerModalState extends State<AddEngineerModal> {
   @override
   void initState() {
     super.initState();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
 
     fields = [
@@ -203,7 +207,7 @@ class _AddEngineerModalState extends State<AddEngineerModal> {
                 title: "مهندس جديد",
                 message: "تم إضافة المهندس ${values["name"].trim()} بنجاح",
                 route: "/engineers",
-                userId: success,
+                userId: currentUserId,
               );
 
               widget.onAdd({

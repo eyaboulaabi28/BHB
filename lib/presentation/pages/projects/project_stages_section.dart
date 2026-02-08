@@ -15,8 +15,8 @@ import 'project_stages_sub_section.dart';
 class ProjectStagesSection extends StatefulWidget {
   final String projectId;
   final String projectName;
-
-  const ProjectStagesSection({super.key, required this.projectId,required this.projectName});
+  final String? ownerId;
+  const ProjectStagesSection({super.key, required this.projectId,required this.projectName,required this.ownerId});
 
   @override
   State<ProjectStagesSection> createState() => _ProjectStagesSectionState();
@@ -265,6 +265,7 @@ class _ProjectStagesSectionState extends State<ProjectStagesSection> {
                 ),
                 children: [
                   ProjectStagesSubSectionStatic(
+                    ownerId:widget.ownerId,
                     stageId: stage['id'],
                     subStages: List<Map<String, dynamic>>.from(
                         stage['subPhases']),

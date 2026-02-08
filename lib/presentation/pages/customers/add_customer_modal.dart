@@ -1,15 +1,12 @@
-import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
-import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/customers_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../domain/auth/usecases/uses_cases_customers.dart';
 import '../../../service_locator.dart';
@@ -37,6 +34,7 @@ class AddCustomerModal extends StatefulWidget {
 class _AddCustomerModalState extends State<AddCustomerModal> {
   final _formKey = GlobalKey<FormState>();
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   // Champs dynamiques pour ce formulaire
   late final List<FormFieldConfig> fields;
@@ -48,6 +46,7 @@ class _AddCustomerModalState extends State<AddCustomerModal> {
   void initState() {
     super.initState();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     final fields = <FormFieldConfig>[
       FormFieldConfig(
@@ -98,6 +97,7 @@ class _AddCustomerModalState extends State<AddCustomerModal> {
     required String message,
     String? route,
     String? userId,
+    String? targetRole,
   }) async {
     final notif = NotificationsModel(
       title: title,
@@ -240,14 +240,15 @@ class _AddCustomerModalState extends State<AddCustomerModal> {
                 );
               });
 
-              // Envoyer la notification
               await _sendNotification(
                 title: "عميل جديد",
-                message: "تم إضافة عميل جديد: ${values["name"].trim()}",
+                message: "تم إضافة العميل الجديد: ${values["name"].trim()}",
                 route: "/home",
-                userId: success,
+                targetRole: "admin",
+                userId: currentUserId,
               );
-            },
+
+                },
           );
         } catch (e) {
           // En cas d'exception, fermer le modal et afficher le SnackBar

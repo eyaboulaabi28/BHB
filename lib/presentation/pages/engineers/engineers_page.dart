@@ -12,6 +12,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
 import 'package:app_bhb/presentation/pages/engineers/add_engineer_modal.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common_widget/generic_form_modal.dart' as generic_modal; // supprime ou alias l'autre import si nécessaire
 import 'package:geocoding/geocoding.dart';
@@ -38,6 +39,7 @@ class _EngineersPageState extends State<EngineersPage> {
   late final GetEngineersUseCase _getAllEngineersUseCase;
   late final DeleteEngineerUseCase _deleteEngineerUseCase;
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   List<Engineer> engineers = [];
   List<Engineer> filteredEngineers = [];
@@ -51,6 +53,8 @@ class _EngineersPageState extends State<EngineersPage> {
     _deleteEngineerUseCase = sl<DeleteEngineerUseCase>();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
     _fetchEngineers();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
   }
 
   Future<void> _sendNotification({
@@ -134,7 +138,7 @@ class _EngineersPageState extends State<EngineersPage> {
           title: "حذف مهندس",
           message: "تم حذف المهندس: ${deletedEngineer.firstName ?? ""}",
           route: "/engineers",
-          userId: engineerId,
+          userId: currentUserId,
         );
       },
     );
@@ -492,7 +496,7 @@ class _EngineersPageState extends State<EngineersPage> {
                                                 message:
                                                 "تم تعديل بيانات المهندس: ${updatedEngineer.firstName}",
                                                 route: "/engineers",
-                                                userId: engineer.id,
+                                                userId: currentUserId,
                                               );
 
                                               Navigator.of(context).pop();
@@ -620,6 +624,7 @@ class _EngineersPageState extends State<EngineersPage> {
                     title: "إضافة مهندس",
                     message: "تم إضافة مهندس جديد: ${values["name"]}",
                     route: "/engineers",
+                    userId: currentUserId,
                   );
                 },
               ),

@@ -16,8 +16,9 @@ import '../../../service_locator.dart';
 
 class ProjectOperationalsTest extends StatefulWidget {
   final String projectId;
+  final String? ownerId;
 
-  const ProjectOperationalsTest({super.key, required this.projectId});
+  const ProjectOperationalsTest({super.key, required this.projectId,required this.ownerId,});
 
   @override
   State<ProjectOperationalsTest> createState() => _ProjectOperationalsTestState();
@@ -327,6 +328,7 @@ class _ProjectOperationalsTestState extends State<ProjectOperationalsTest> {
                             borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
                           ),
                           builder: (_) => AddTaskTestDialog(
+                            ownerId:widget.ownerId,
                             testId: test['id'],
                             testName: test['name'],
                             projectId: widget.projectId,

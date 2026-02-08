@@ -5,6 +5,7 @@ import 'package:app_bhb/data/auth/models/engineers_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -62,6 +63,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
   late final List<FormFieldConfig> fields;
   late final Map<String, TextEditingController> _controllers;
   late final Map<String, bool> _obscureMap;
+  late String? currentUserId;
 
   List<Engineer> engineers = [];
   late final TextEditingController engineerCtrl;
@@ -73,6 +75,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
     super.initState();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
     _loadEngineers();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     engineerCtrl = TextEditingController();
 
@@ -286,7 +289,7 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                                   _sendNotification(
                                     title: "مادة جديدة",
                                     message: "تم إضافة مادة جديدة: المرحلة: ${newMaterial.stage}, الوصف: ${newMaterial.description}",
-                                    userId: id,
+                                    userId: currentUserId,
                                     route: null,
                                   );
 

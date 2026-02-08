@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/data/auth/models/sub_tests_model.dart';
 import 'package:app_bhb/data/auth/models/tasks_tests_model.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_tasks_tests.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,13 +21,14 @@ class AddTaskTestDialog extends StatefulWidget {
   final String projectId;
   final String testName;
   final VoidCallback? onTaskAdded;
-
+  final String? ownerId;
 
   const AddTaskTestDialog({
     super.key,
     required this.testId,
     required this.testName,
     required this.projectId,
+    required this.ownerId,
     this.onTaskAdded,
   });
 
@@ -37,16 +40,39 @@ class _AddTaskTestDialogState extends State<AddTaskTestDialog> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
   final AddTasksTestUseCase _addTasksTestUseCase = sl<AddTasksTestUseCase>();
-
+  late final CreateNotificationUseCase _createNotificationUseCase;
   final TextEditingController _notesController = TextEditingController();
 
   // Images Mobile
   List<File> _imagesMobile = [];
 
+  @override
+  void dispose() {
+    super.dispose();
+    _createNotificationUseCase = sl<CreateNotificationUseCase>();
 
+  }
   // Images Web
   List<Uint8List> _imagesWeb = [];
+  Future<void> _sendNotification({
+    required String title,
+    required String message,
+    String? userId,
+    String? route,
+    String? targetRole,
+  }) async {
+    final notif = NotificationsModel(
+        title: title,
+        message: message,
+        userId: userId,
+        route: route,
+        createdAt: DateTime.now(),
+        isRead: false,
+        targetRole: targetRole
+    );
 
+    await _createNotificationUseCase(notification: notif);
+  }
 
   Future<void> _pickImage(bool isBefore) async {
     await showModalBottomSheet(
@@ -246,6 +272,15 @@ class _AddTaskTestDialogState extends State<AddTaskTestDialog> {
         parentContext,
         message: "تمت إضافة المهمة بنجاح ✅",
         type: SnackBarType.success,
+      );
+      final notifMessage = "تمت إضافة مهمة جديدة\n"
+          "المشروع: ${widget.testName}\n";
+      await _sendNotification(
+        title: "مهمة جديدة",
+        message: notifMessage,
+        route: "/home",
+        userId: widget.ownerId,
+        targetRole: "customer",
       );
       widget.onTaskAdded?.call();
 

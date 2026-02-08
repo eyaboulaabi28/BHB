@@ -3,12 +3,14 @@ import 'dart:typed_data';
 import 'package:app_bhb/common_widget/app_keys.dart';
 import 'package:app_bhb/data/auth/models/attachments_model.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
+import 'package:app_bhb/data/auth/models/projects_model.dart';
 import 'package:app_bhb/data/auth/source/attachments_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/notification_service.dart';
 import 'package:app_bhb/domain/auth/repository/attachments_repository.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_attachemants.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/projects/add_project_attachement.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -21,8 +23,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 class ProjectAttachments extends StatefulWidget {
   final String projectId;
-
-  const ProjectAttachments({super.key, required this.projectId});
+  final String? ownerId;
+  const ProjectAttachments({super.key, required this.projectId, required this.ownerId});
 
   @override
   State<ProjectAttachments> createState() => _ProjectAttachmentsState();
@@ -41,6 +43,8 @@ class _ProjectAttachmentsState extends State<ProjectAttachments> {
     _notificationService = NotificationService(_createNotificationUseCase);
     _loadProjectAttachments();
   }
+
+
 
   /// Charger les attachments depuis Firestore
   Future<void> _loadProjectAttachments() async {
@@ -102,26 +106,54 @@ class _ProjectAttachmentsState extends State<ProjectAttachments> {
     final result = await sl<DeleteAttachmentUseCase>().call(params: att["id"]);
 
     result.fold(
-          (failure) => CustomSnackBar.show(context, message: "خطأ في الحذف: $failure", type: SnackBarType.error),
+          (failure) => CustomSnackBar.show(
+        context,
+        message: "خطأ في الحذف: $failure",
+        type: SnackBarType.error,
+      ),
           (_) {
-        CustomSnackBar.show(context, message: "تم حذف المرفق بنجاح", type: SnackBarType.success);
+        CustomSnackBar.show(
+          context,
+          message: "تم حذف المرفق بنجاح",
+          type: SnackBarType.success,
+        );
+
+        // Ajouter le filename dans la notification
+        final fileName = att["filename"] ?? "المرفق"; // fallback si filename manquant
+
+        _sendNotification(
+          title: "تم حذف المرفق بنجاح",
+          message: "تم حذف المرفق ' ${att["fileName"]}",
+          route: "/home",
+          userId: widget.ownerId,
+          targetRole: "customer",
+        );
+
         _loadProjectAttachments();
       },
     );
   }
 
+
   /// Envoyer notification
-  Future<void> _sendNotification({required String title, required String message, String? userId, String? route}) async {
+  Future<void> _sendNotification({
+    required String title,
+    required String message,
+    String? userId,
+    String? route,
+    String? targetRole,
+  }) async {
     final notif = NotificationsModel(
       title: title,
       message: message,
+      createdAt: DateTime.now(),
       userId: userId,
       route: route,
-      createdAt: DateTime.now(),
+      targetRole: targetRole,
       isRead: false,
     );
 
-    await _createNotificationUseCase(notification: notif);
+    await _createNotificationUseCase.call(notification: notif);
   }
 
   /// Ajouter un fichier
@@ -231,13 +263,13 @@ class _ProjectAttachmentsState extends State<ProjectAttachments> {
           );
 
           // Notification
-          _sendNotification(
-            title: "مرفق جديد",
-            message: "تم إضافة مرفق جديد: ${attachment.fileName}",
-            userId: currentUserId,
-            route: "/home",
+           _sendNotification(
+          title: "مرفق جديد",
+          message: "تم إضافة مرفق جديد للمشروع: ${attachment.fileName}",
+          route: "/home",
+          userId: widget.ownerId,
+          targetRole: "customer",
           );
-
           // Recharge la liste
           _loadProjectAttachments();
         },

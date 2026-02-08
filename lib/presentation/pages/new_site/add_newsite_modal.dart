@@ -12,6 +12,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_newsite.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -41,6 +42,7 @@ class AddNewsiteModal extends StatefulWidget {
 class _AddNewsiteModalState extends State<AddNewsiteModal> {
   final _formKey = GlobalKey<FormState>();
   late final CreateNotificationUseCase _createNotificationUseCase;
+  late String? currentUserId;
 
   // Champs dynamiques pour ce formulaire
   late final List<FormFieldConfig> fields;
@@ -100,6 +102,8 @@ class _AddNewsiteModalState extends State<AddNewsiteModal> {
     ];
     _controllers = {for (var f in fields) f.key: TextEditingController()};
     _obscureMap = {for (var f in fields) f.key: f.isPassword};
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
   }
 
   Future<void> _loadEngineers() async {
@@ -333,7 +337,7 @@ class _AddNewsiteModalState extends State<AddNewsiteModal> {
                 title: "زيارة موقع جديد",
                 message: "تم إضافة زيارة موقع جديد للعميل : ${values["customerName"].trim()}",
                 route: "/home",
-                userId: success,
+                userId: currentUserId,
               );
             },
           );

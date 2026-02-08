@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:app_bhb/common/color_extension.dart';
@@ -63,6 +64,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
   bool _isSubmitting = false;
+  late String? currentUserId;
 
   // ✒️ Signature
   final SignatureController _signatureController = SignatureController(
@@ -103,6 +105,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
     _loadEngineers();
     _loadEmployees();
     _loadCustomers();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     fields = [
       FormFieldConfig(
@@ -603,7 +606,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                       title: "اجتماع جديد",
                                       message:
                                       "تم إضافة اجتماع جديد: ${_controllers["titleMeeting"]!.text.trim()}",
-                                      userId: success,
+                                      userId: selectedCustomerId,
                                       route: "/home",
                                     );
 

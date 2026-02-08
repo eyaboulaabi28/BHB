@@ -12,16 +12,21 @@ class AddDateUseCase implements UseCase<Either,Date> {
     return await sl<DateRepository>().addDate(params!);
   }
 }
-class GetDateUseCase implements UseCase<Either, void> {
+class GetDateUseCase {
   final DateRepository _repo;
-
   GetDateUseCase(this._repo);
 
-  @override
-  Future<Either> call({void params}) async {
-    return await _repo.getAllDate();
+  Future<Either> call({
+    required String userId,
+    required String role,
+  }) async {
+    return await _repo.getAllDate(
+      userId: userId,
+      role: role,
+    );
   }
 }
+
 class GetDateByIdUseCase implements UseCase<Either, String> {
   final DateRepository _repository;
 

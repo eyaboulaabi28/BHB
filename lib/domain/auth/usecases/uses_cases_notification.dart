@@ -12,12 +12,27 @@ class CreateNotificationUseCase {
     await _repo.createNotification(notification);
   }
 }
-class GetNotificationUseCase implements UseCase<Either, void> {
+class GetNotificationUseCase implements UseCase<Either, GetNotificationsParams> {
+  final NotificationRepository repository;
+
+  GetNotificationUseCase(this.repository);
+
   @override
-  Future<Either> call({void params}) async {
-    return await sl<NotificationRepository>().getAllNotifications();
+  Future<Either> call({GetNotificationsParams? params}) async {
+    if (params == null) {
+      throw ArgumentError('params cannot be null');
+    }
+    return await repository.getAllNotifications(role: params.role);
   }
 }
+
+
+class GetNotificationsParams {
+  final String role;
+
+  GetNotificationsParams({required this.role});
+}
+
 class MarkNotificationAsReadUseCase {
   final NotificationRepository _repo = sl<NotificationRepository>();
 

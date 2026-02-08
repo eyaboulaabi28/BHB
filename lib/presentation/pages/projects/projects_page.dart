@@ -158,7 +158,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
           _sendNotification(
             title: " حذف المشروع ",
             message: "تم إضافة مشروع جديد: ${deletedCustomer.projectName}",
-            userId: success,
+            userId: currentUserId,
             route: "/home",
           );
           _fetchProjects();
@@ -288,7 +288,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       _sendNotification(
                         title: "مشروع جديد",
                         message: "تم إضافة مشروع جديد: ${project.projectName}",
-                        userId: success,
+                        userId: currentUserId,
                         route: "/home",
                       );
                       _fetchProjects();

@@ -11,7 +11,7 @@ class ProjectStagesSubSectionStatic extends StatefulWidget {
   final List<Map<String, dynamic>> subStages;
   final String projectId;
   final String projectName;
-
+  final String? ownerId;
   final Function(
       String stageId,
       String subId,
@@ -25,6 +25,7 @@ class ProjectStagesSubSectionStatic extends StatefulWidget {
     required this.projectId,
     required this.onSubStatusChanged,
     required this.projectName,
+    required this.ownerId,
   });
 
   @override
@@ -164,10 +165,11 @@ class _ProjectStagesSubSectionStaticState extends State<ProjectStagesSubSectionS
                           BorderRadius.vertical(top: Radius.circular(25)),
                         ),
                         builder: (_) => AddTaskDialog(
-
+                          ownerId: widget.ownerId,
                           subStage: fakeSubStage,
                           projectId: widget.projectId,
                           projectName: _projectNameFromFirebase!,
+
                         ),
                       );
                     },

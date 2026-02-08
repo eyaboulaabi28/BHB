@@ -1,5 +1,6 @@
 import 'package:app_bhb/common_widget/generic_form_modal.dart';
 import 'package:app_bhb/data/auth/models/comments_project.dart';
+import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/data/auth/source/comments_project_firebase_service.dart';
 import 'package:app_bhb/data/auth/source/notification_service.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_comments_project.dart';
@@ -11,8 +12,9 @@ import '../../../service_locator.dart';
 
 class ProjectComments extends StatefulWidget {
   final String projectId;
+  final String? ownerId;
 
-  const ProjectComments({super.key, required this.projectId});
+  const ProjectComments({super.key, required this.projectId,required this.ownerId});
 
   @override
   State<ProjectComments> createState() => _ProjectCommentsState();
@@ -20,14 +22,34 @@ class ProjectComments extends StatefulWidget {
 
 class _ProjectCommentsState extends State<ProjectComments> {
   final List<Map<String, dynamic>> _projectComments = [];
-  late final NotificationService _notificationService;
+  late final CreateNotificationUseCase _createNotificationUseCase;
 
   @override
   void initState() {
     super.initState();
     _loadProjectComments();
-    _notificationService = NotificationService(sl<CreateNotificationUseCase>());
+    _createNotificationUseCase = sl<CreateNotificationUseCase>();
 
+
+  }
+  Future<void> _sendNotification({
+    required String title,
+    required String message,
+    String? userId,
+    String? route,
+    String? targetRole,
+  }) async {
+    final notif = NotificationsModel(
+        title: title,
+        message: message,
+        userId: userId,
+        route: route,
+        createdAt: DateTime.now(),
+        isRead: false,
+        targetRole: targetRole
+    );
+
+    await _createNotificationUseCase(notification: notif);
   }
 
   Future<void> _loadProjectComments() async {
@@ -104,11 +126,14 @@ class _ProjectCommentsState extends State<ProjectComments> {
                   message: "تمت إضافة الملاحظة بنجاح",
                   type: SnackBarType.success,
                 );
-                _notificationService.send(
-                  title: "إضافة الملاحظة",
-                  message: "تم إضافة الملاحظة: ${comment.nameComment}",
-                  route: "/home",
+                 _sendNotification(
+                title: "إضافة الملاحظة",
+                message: "تم إضافة الملاحظة: ${comment.nameComment}",
+                route: "/home",
+                userId: widget.ownerId,
+                targetRole: "customer",
                 );
+
                 _loadProjectComments();
               },
             );

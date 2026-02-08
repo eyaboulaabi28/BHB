@@ -107,18 +107,6 @@ class _NewSitePageState extends State<NewSitePage> {
     }
   }
 
-  Future<void> _sendNotification({required String title, required String message, String? route, String? userId,}) async {
-    final notif = NotificationsModel(
-      title: title,
-      message: message,
-      createdAt: DateTime.now(),
-      userId: userId,
-      route: route,
-      isRead: false,
-    );
-
-    await _createNotificationUseCase.call(notification: notif);
-  }
 
 
   void _onBottomNavTapped(int index) {

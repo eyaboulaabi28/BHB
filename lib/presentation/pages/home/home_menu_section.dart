@@ -16,6 +16,7 @@ import 'package:app_bhb/presentation/pages/new_site/new_site_page.dart';
 import 'package:app_bhb/presentation/pages/projects/projects_page.dart';
 import 'package:app_bhb/presentation/pages/settings/settings_page.dart';
 import 'package:app_bhb/presentation/pages/vacation/vacation_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common/color_extension.dart';
 
@@ -45,8 +46,14 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
   @override
   void initState() {
     super.initState();
-    _fetchPendingDates();
+
+    if (widget.userRole == "admin" || widget.userRole == "engineer") {
+      _fetchPendingDates();
+    } else {
+      isLoading = false;
+    }
   }
+
   bool isLate(Date d) {
     if (d.createdAt == null) return false;
 
@@ -59,7 +66,12 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
   }
 
   Future<void> _fetchPendingDates() async {
-    final result = await sl<GetDateUseCase>().call();
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final result = await sl<GetDateUseCase>().call(
+      userId: uid,
+      role: widget.userRole,
+    );
 
     result.fold(
           (_) => setState(() => isLoading = false),
@@ -70,17 +82,16 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
               .where((d) => !isLate(d))
               .toList();
 
-
           lateDates = list
               .where((d) => d.status == DateStatus.late)
               .toList();
-
 
           isLoading = false;
         });
       },
     );
   }
+
 
 
 
@@ -201,7 +212,7 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           "color": Colors.orange.shade200,
           "title": "زيارة موقع جديد",
           "page": NewSitePage(selectedType: "", projectName: ""),
-          "roles": ["admin", "engineer", "customer"],
+          "roles": ["admin", "engineer",],
         },
 
 
@@ -449,4 +460,5 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
 
 
 }
+
 
