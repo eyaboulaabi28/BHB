@@ -51,7 +51,6 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
         key: "name",
         hint: "اسم الموظف",
         icon: const Icon(Icons.person, color: Colors.grey),
-        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال الاسم" : null,
       ),
       FormFieldConfig(
         key: "email",
@@ -65,14 +64,12 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
         hint: "رقم الموظف",
         icon: const Icon(Icons.phone, color: Colors.grey),
         keyboardType: TextInputType.phone,
-        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال رقم الموظف" : null,
       ),
       FormFieldConfig(
         key: "profession",
         hint: "مهنة الموظف",
         icon: const Icon(Icons.category, color: Colors.grey),
         options: ["فني كهرباء", "فني سباكة", "عامل", "مساعد", "فني"],
-        validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار المهنة الموظف" : null,
       ),
       FormFieldConfig(
         key: "location",
@@ -110,8 +107,6 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
         key: "name",
         hint: "اسم الموظف",
         icon: const Icon(Icons.person, color: Colors.grey),
-        validator: (v) =>
-        (v == null || v.isEmpty) ? "الرجاء إدخال الاسم" : null,
       ),
       FormFieldConfig(
         key: "email",
@@ -125,16 +120,12 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
         hint: "رقم الموظف",
         icon: const Icon(Icons.phone, color: Colors.grey),
         keyboardType: TextInputType.phone,
-        validator: (v) =>
-        (v == null || v.isEmpty) ? "الرجاء إدخال رقم الموظف" : null,
       ),
       FormFieldConfig(
         key: "profession",
         hint: "مهنة الموظف",
         icon: const Icon(Icons.category, color: Colors.grey),
         options: ["فني كهرباء", "فني سباكة", "عامل", "مساعد", "فني"],
-        validator: (v) =>
-        (v == null || v.isEmpty) ? "الرجاء اختيار مهنة الموظف" : null,
       ),
       FormFieldConfig(
         key: "location",
@@ -146,7 +137,6 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
     return GenericFormModal(
       title: widget.title,
       fields: fields,
-
       // ---------------- LOCATION HANDLER ------------------
       extraFieldBuilders: {
         "location": (field, controller) {

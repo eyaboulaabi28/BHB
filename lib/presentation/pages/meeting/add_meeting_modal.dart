@@ -65,7 +65,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
   List<XFile> _selectedImages = [];
   bool _isSubmitting = false;
   late String? currentUserId;
-
+  final TextEditingController commentCtrl = TextEditingController();
   // ✒️ Signature
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
@@ -440,8 +440,15 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
 
                   _buildSelectedImages(),
                   const SizedBox(height: 20),
-
-                  // Dynamic Fields
+                  NewRoundTextField(
+                    hintText: "ملاحظات متعلقة بالصور",
+                    controller: commentCtrl,
+                    isPadding: true,
+                    right: const Icon(Icons.receipt, color: Colors.grey),
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 20),
+                 // Dynamic Fields
                   ...fields.map((field) {
                     if (field.key == "description") return Padding(padding: const EdgeInsets.only(bottom: 15), child: _buildParagraphField(field));
                     if (field.options != null && field.options!.isNotEmpty) {
@@ -578,6 +585,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                   nameEmployee: employeeCtrl.text.trim(),
                                   uidEmployee: selectedEmployeeId,
                                   nameCustomer: customerCtrl.text.trim(),
+                                  commentCtrl:commentCtrl.text.trim(),
                                   uidCustomer: selectedCustomerId,
                                   imageUrls: uploadedUrls,
                                   signatureUrl: signatureUrl,

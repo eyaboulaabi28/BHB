@@ -409,6 +409,7 @@ class _MeetingPageState extends State<MeetingPage> {
                         imageUrls:values["imageUrls"],
                         signatureUrl: values["signatureUrl"],
                         customerPhone: values['customerPhone'],
+                        commentCtrl: values['commentCtrl'],
 
                       ),
                     );
@@ -437,6 +438,12 @@ class _MeetingPageState extends State<MeetingPage> {
   void _openMeetingDetails(Meeting meeting) {
     // Champs du formulaire
     final List<generic_modal.FormFieldConfig> fields = [
+      generic_modal.FormFieldConfig(
+        key: "commentCtrl",
+        hint: "ملاحظات متعلقة بالصور",
+        icon: const Icon(Icons.receipt, color: Colors.grey),
+        isParagraph: true,
+      ),
       generic_modal.FormFieldConfig(
         key: "titleMeeting",
         hint: "عنوان الاجتماع",
@@ -483,6 +490,7 @@ class _MeetingPageState extends State<MeetingPage> {
     // Valeurs initiales
     final Map<String, String> initialValues = {
       "titleMeeting": meeting.titleMeeting ?? "",
+      "commentCtrl": meeting.commentCtrl ?? "لا توجد أي ملاحظات حول الصور",
       "description": meeting.description ?? "",
       "type": meeting.type ?? "",
       "nameEngineer": meeting.nameEngineer ?? "",
@@ -561,14 +569,12 @@ class _MeetingPageState extends State<MeetingPage> {
                             ),
                             const SizedBox(height: 25),
                           ],
-
-
                           // ✍️ توقيع العميل
                           if (meeting.signatureUrl != null &&
                               meeting.signatureUrl!.isNotEmpty &&
                               meeting.type == "مع العميل") ...[
                             const Text(
-                              "✍️ توقيع العميل",
+                              "✍️ توقيع",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontFamily: "Tajawal",

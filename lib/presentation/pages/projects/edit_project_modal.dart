@@ -161,8 +161,8 @@ class _EditProjectModalState extends State<EditProjectModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildStepTitle("معلومات أساسية"),
-              _buildInput(Icons.location_city, "الأمانة", _controllers["municipality"]!),
-              _buildInput(Icons.apartment, "البلدية", _controllers["district"]!,),
+            //  _buildInput(Icons.location_city, "الأمانة", _controllers["municipality"]!),
+           //   _buildInput(Icons.apartment, "البلدية", _controllers["district"]!,),
               _buildInput(Icons.work, "اسم المشروع", _controllers["projectName"]!,),
               _buildInput(
                 Icons.map,

@@ -162,6 +162,7 @@ class MeetingPdfGenerator {
           infoRow("تاريخ الاجتماع", formatDate(meeting.dateMeeting)),
 
           // 🔸 Images
+          // 🔸 Images
           if (meetingImages != null && meetingImages.isNotEmpty) ...[
             pw.SizedBox(height: 22),
             pw.Text(
@@ -175,11 +176,11 @@ class MeetingPdfGenerator {
             ),
             pw.SizedBox(height: 10),
             pw.Wrap(
-              spacing: 10, // مسافة أفقية بين الصور
-              runSpacing: 10, // مسافة عمودية بين السطور
+              spacing: 10,
+              runSpacing: 10,
               children: meetingImages.map((img) {
                 return pw.Container(
-                  width: 180, // خفّضنا العرض شوية
+                  width: 180,
                   height: 180,
                   decoration: pw.BoxDecoration(
                     borderRadius: pw.BorderRadius.circular(14),
@@ -194,7 +195,40 @@ class MeetingPdfGenerator {
               }).toList(),
             ),
 
+            // 🔹 COMMENTAIRE CLIENT
+            if (meeting.commentCtrl != null && meeting.commentCtrl!.isNotEmpty) ...[
+              pw.SizedBox(height: 18),
+              pw.Text(
+                "ملاحظات الاجتماع:",
+                style: pw.TextStyle(
+                  font: arabicFont,
+                  fontSize: 13,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('#022C43'),
+                ),
+                textDirection: pw.TextDirection.rtl,
+              ),
+              pw.SizedBox(height: 6),
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#F0F0F0'),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Text(
+                  meeting.commentCtrl!,
+                  style: pw.TextStyle(
+                    font: arabicFont,
+                    fontSize: 12,
+                    color: PdfColors.black,
+                  ),
+                  textDirection: pw.TextDirection.rtl,
+                ),
+              ),
+            ],
           ],
+
 
           // 🔸 Signature
           if (signatureImage != null && meeting.type == "مع العميل") ...[

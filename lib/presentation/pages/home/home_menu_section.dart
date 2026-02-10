@@ -111,7 +111,7 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           "color": Colors.blue.shade100,
           "title": " إدارة العملاء ",
           "page": const CustomersPage(selectedType: "",projectName: "",),
-          "roles": ["admin", "resource",],
+          "roles": ["admin", "engineer",],
         },
         {
           "icon": Icons.manage_accounts,

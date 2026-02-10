@@ -3,13 +3,16 @@ import 'package:app_bhb/data/auth/models/engineers_model.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_customers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
-import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
-
 import '../../../service_locator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 
 class AddProjectModal extends StatefulWidget {
 
@@ -144,6 +147,32 @@ class _AddProjectModalState extends State<AddProjectModal> {
     if (_currentStep > 0) setState(() => _currentStep--);
   }
 
+  Future<String> getAddressFromLatLng(double lat, double lng) async {
+    try {
+      if (kIsWeb) {
+        final url = Uri.parse(
+            "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1&accept-language=ar");
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          return data["display_name"] ?? "غير معروف";
+        } else {
+          return "غير معروف";
+        }
+      }
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isEmpty) return "غير معروف";
+      final p = placemarks.first;
+      final locality = p.locality ?? "";
+      final street = p.street ?? "";
+      final country = p.country ?? "";
+      if (locality.isEmpty && street.isEmpty && country.isEmpty) return "غير معروف";
+      return "$locality - $street - $country".trim();
+    } catch (e) {
+      print("Reverse Geocoding Error: $e");
+      return "غير معروف";
+    }
+  }
 
   Widget _buildStepContent(int step) {
     switch (step) {
@@ -154,45 +183,7 @@ class _AddProjectModalState extends State<AddProjectModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildStepTitle("معلومات أساسية"),
-              _buildInput(Icons.location_city, "المدينة", _controllers["municipality"]!,
-                  validator: "الرجاء إدخال المدينة"),
-              _buildInput(Icons.apartment, "الحي", _controllers["district"]!,
-                  validator: "الرجاء إدخال الحي"),
-              _buildInput(Icons.work, "اسم المشروع", _controllers["projectName"]!,
-                  validator: "الرجاء إدخال اسم المشروع"),
-              _buildInput(
-                Icons.map,
-                "عنوان المشروع",
-                _controllers["projectAddress"]!,
-                onTap: () async {
-                  final selected = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SelectLocationMap(),
-                    ),
-                  );
-
-                  if (selected != null) {
-                    setState(() {
-                      _controllers["projectAddress"]!.text = selected["address"];
-                      selectedLat = selected["lat"];
-                      selectedLng = selected["lng"];
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-
-      case 1:
-        return Form(
-          key: _formKeys[1],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildStepTitle("تفاصيل الملكية"),
-             // _buildInput(Icons.person, "اسم المالك", _controllers["ownerName"]!),
+              _buildInput(Icons.work, "اسم المشروع", _controllers["projectName"]!),
               NewRoundSelectField(
                 hintText: "اسم المالك",
                 options: customers.map((e) => e.firstName ?? "").toList(),
@@ -200,14 +191,32 @@ class _AddProjectModalState extends State<AddProjectModal> {
                 rightIcon: const Icon(Icons.person),
                 enableSearch:true,
 
-                onChanged: (value) {
+                onChanged: (value) async {
                   final selectedCustomer = customers.firstWhere(
                         (c) => c.firstName == value,
                     orElse: () => Customers(),
                   );
+
                   _controllers["phoneNumber"]!.text =
                       selectedCustomer.phone ?? "";
+
+                  selectedLat = selectedCustomer.latitude;
+                  selectedLng = selectedCustomer.longitude;
+
+                  if (selectedLat != null && selectedLng != null) {
+                    _controllers["projectAddress"]!.text = "جاري تحديد الموقع...";
+
+                    final address = await getAddressFromLatLng(
+                      selectedLat!,
+                      selectedLng!,
+                    );
+
+                    _controllers["projectAddress"]!.text = address;
+                  } else {
+                    _controllers["projectAddress"]!.text = "الموقع ليس محدد إلى الآن";
+                  }
                 },
+
               ),
 
               const SizedBox(height: 10),
@@ -217,6 +226,27 @@ class _AddProjectModalState extends State<AddProjectModal> {
                 _controllers["phoneNumber"]!,
                 keyboard: TextInputType.phone,
               ),
+
+              _buildInput(
+                Icons.map,
+                "عنوان المشروع",
+                _controllers["projectAddress"]!,
+                keyboard: TextInputType.text,
+              ),
+            ],
+          ),
+        );
+
+
+      case 1:
+        return Form(
+          key: _formKeys[1],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStepTitle("تفاصيل الملكية"),
+             // _buildInput(Icons.person, "اسم المالك", _controllers["ownerName"]!),
+
               _buildInput(Icons.confirmation_number, "رقم رخصة البناء",
                   _controllers["licenseNumber"]!),
               _buildInput(Icons.numbers, "رقم قطعة الأرض", _controllers["plotNumber"]!),
@@ -251,7 +281,7 @@ class _AddProjectModalState extends State<AddProjectModal> {
               _buildInput(Icons.architecture, "المكتب الهندسي المشرف",
                   _controllers["supervisorOffice"]!,maxLines: 5,),
               _buildInput(Icons.business, "مقاول البناء", _controllers["contractor"]!),
-              //_buildInput(Icons.engineering, "اسم المهندس المشرف", _controllers["engineerName"]!),
+
               NewRoundSelectField(
                 hintText: "اسم المهندس المشرف",
                 options: engineers.map((e) => e.firstName ?? "").toList(),

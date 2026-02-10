@@ -351,32 +351,25 @@ class _EmployeesPageState extends State<EmployeesPage> {
                                         key: "name",
                                         hint: "اسم الموظف",
                                         icon: const Icon(Icons.person, color: Colors.grey),
-                                        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال الاسم" : null,
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "email",
                                         hint: "البريد الإلكتروني",
                                         icon: const Icon(Icons.email, color: Colors.grey),
                                         keyboardType: TextInputType.emailAddress,
-                                        validator: (v) {
-                                          if (v == null || v.isEmpty) return "الرجاء إدخال البريد الإلكتروني";
-                                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return "البريد الإلكتروني غير صالح";
-                                          return null;
-                                        },
+
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "phone",
                                         hint: "رقم الموظف",
                                         icon: const Icon(Icons.phone, color: Colors.grey),
                                         keyboardType: TextInputType.phone,
-                                        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال رقم الموظف" : null,
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "profession",
                                         hint: "المهنة",
                                         icon: const Icon(Icons.category, color: Colors.grey),
                                         options: ["فني كهرباء", "فني سباكة", "عامل", "مساعد", "فني"],
-                                        validator: (v) => (v == null || v.isEmpty) ? "الرجاء اختيار نوع المهنة" : null,
                                       ),
                                       generic_modal.FormFieldConfig(
                                         key: "location",
