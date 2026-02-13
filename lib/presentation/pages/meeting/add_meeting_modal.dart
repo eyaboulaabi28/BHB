@@ -1,7 +1,7 @@
 import 'dart:io';
+import 'package:app_bhb/data/auth/models/ImageGroup.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path;
-
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
 import '../../../service_locator.dart';
+
 class FormFieldConfig {
   final String key;
   final String hint;
@@ -65,6 +66,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
   List<XFile> _selectedImages = [];
   bool _isSubmitting = false;
   late String? currentUserId;
+  List<ImageGroup> _imageGroups = [];
   final TextEditingController commentCtrl = TextEditingController();
   // ✒️ Signature
   final SignatureController _signatureController = SignatureController(
@@ -72,11 +74,12 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
+  Map<XFile, String> _imageRemarks = {};
   // Data lists
   List<Engineer> engineers = [];
   List<Employees> employees = [];
   List<Customers> customers = [];
-
+  int _currentStep = 0;
   // Selected IDs
   String? selectedEngineerId;
   String? selectedEmployeeId;
@@ -174,56 +177,149 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
     );
   }
 
-  Future<void> _pickImage() async {
+  /*Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: FractionallySizedBox(
-          heightFactor: 0.25,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 📸 Caméra (1 image)
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.green),
-                title: const Text("التقط صورة بالكاميرا"),
-                onTap: () async {
-                  final picked = await _picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 80,
-                  );
-                  if (picked != null && mounted) {
-                    setState(() => _selectedImages.add(picked));
-                  }
-                  Navigator.pop(context);
-                },
-              ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "اختيار مصدر الصورة",
+                  style: TextStyle(
+                    fontFamily: "Tajawal",
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-              // 🖼️ Galerie (MULTI images)
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.blue),
-                title: const Text("اختيار عدة صور من المعرض"),
-                onTap: () async {
-                  final pickedImages = await _picker.pickMultiImage(
-                    imageQuality: 80,
-                  );
+                // 📷 الكاميرا
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.blue),
+                  title: const Text("التقاط صورة"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final XFile? image = await _picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 80,
+                    );
+                    if (image != null && mounted) {
+                      setState(() {
+                        _imageGroups.add(ImageGroup(images: [image]));
+                      });
+                    }
+                  },
+                ),
 
-                  if (pickedImages.isNotEmpty && mounted) {
-                    setState(() {
-                      _selectedImages.addAll(pickedImages);
-                    });
-                  }
-                  Navigator.pop(context);
-                },
-              ),
-            ],
+                // 🖼️ المعرض
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Colors.green),
+                  title: const Text("اختيار من المعرض"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final List<XFile> images =
+                    await _picker.pickMultiImage(imageQuality: 80);
+                    if (images.isNotEmpty && mounted) {
+                      setState(() {
+                        _imageGroups.add(ImageGroup(images: images));
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
+        );
+      },
+    );
+  }*/
+
+  Future<void> _pickImage({int? groupIndex}) async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "اختيار مصدر الصورة",
+                  style: TextStyle(
+                    fontFamily: "Tajawal",
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                /// 📷 Camera
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.blue),
+                  title: const Text("التقاط صورة"),
+                  onTap: () async {
+                    Navigator.pop(context);
+
+                    final XFile? image = await _picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 80,
+                    );
+
+                    if (image != null && mounted) {
+                      setState(() {
+                        if (groupIndex != null) {
+                          // Ajouter dans groupe existant
+                          _imageGroups[groupIndex].images.add(image);
+                        } else {
+                          // Nouveau groupe
+                          _imageGroups.add(
+                            ImageGroup(images: [image], remark: ""),
+                          );
+                        }
+                      });
+                    }
+                  },
+                ),
+
+                /// 🖼️ Galerie
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Colors.green),
+                  title: const Text("اختيار من المعرض"),
+                  onTap: () async {
+                    Navigator.pop(context);
+
+                    final List<XFile> images =
+                    await _picker.pickMultiImage(imageQuality: 80);
+
+                    if (images.isNotEmpty && mounted) {
+                      setState(() {
+                        if (groupIndex != null) {
+                          _imageGroups[groupIndex].images.addAll(images);
+                        } else {
+                          _imageGroups.add(
+                            ImageGroup(images: images, remark: ""),
+                          );
+                        }
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -356,66 +452,8 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
     );
   }
 
-  Widget _buildSelectedImages() {
-    const double cardWidth = 130; // ← largeur augmentée
-    const double cardHeight = 130; // ← hauteur augmentée
-
-    return SizedBox(
-      height: cardHeight,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ..._selectedImages.map((img) {
-              final index = _selectedImages.indexOf(img);
-              return Stack(
-                children: [
-                  Container(
-                    width: cardWidth,
-                    height: cardHeight,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20), // coins un peu plus arrondis
-                      image: DecorationImage(
-                        image: kIsWeb ? NetworkImage(img.path) : FileImage(File(img.path)) as ImageProvider,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedImages.removeAt(index)),
-                      child: const Icon(Icons.cancel, color: Colors.red, size: 22),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-
-            // Bouton pour ajouter une image
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                width: cardWidth,
-                height: cardHeight,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(Icons.add_a_photo, size: 45, color: Colors.grey),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ========== BUILD ==========
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -427,146 +465,292 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
           padding: const EdgeInsets.all(20),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(25),
+            ),
           ),
           child: Form(
             key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(widget.title, style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold, fontSize: 20)),
-                  const SizedBox(height: 20),
-
-                  _buildSelectedImages(),
-                  const SizedBox(height: 20),
-                  NewRoundTextField(
-                    hintText: "ملاحظات متعلقة بالصور",
-                    controller: commentCtrl,
-                    isPadding: true,
-                    right: const Icon(Icons.receipt, color: Colors.grey),
-                    maxLines: 5,
+            child: Column(
+              children: [
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    fontFamily: 'Tajawal',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
                   ),
-                  const SizedBox(height: 20),
-                 // Dynamic Fields
-                  ...fields.map((field) {
-                    if (field.key == "description") return Padding(padding: const EdgeInsets.only(bottom: 15), child: _buildParagraphField(field));
-                    if (field.options != null && field.options!.isNotEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: NewRoundSelectField(
-                          hintText: field.hint,
-                          options: field.options!,
-                          controller: _controllers[field.key],
-                          validator: field.validator,
-                          rightIcon: field.icon,
-                          onChanged: (value) {
-                            setState(() {
-                              _meetingType = value;
-                              _showSignature = value == "مع العميل";
-                            });
-                          },
+                ),
+                const SizedBox(height: 20),
+
+                // 🔥 مهم جداً
+                Expanded(
+                  child: Stepper(
+                    type: StepperType.horizontal,
+                    currentStep: _currentStep,
+                    onStepTapped: (step) {
+                      setState(() => _currentStep = step);
+                    },
+                    controlsBuilder: (context, details) {
+                      return const SizedBox(); // نحذف أزرار stepper
+                    },
+                    steps: [
+                      // ================= STEP 1 =================
+                      Step(
+                        title: const Text("الصور"),
+                        isActive: _currentStep >= 0,
+                        content: Column(
+                          children: [
+                            _buildSelectedImagesWithRemarks(),
+                            const SizedBox(height: 20),
+
+                          ],
                         ),
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 15),
-                      child: NewRoundTextField(
-                        hintText: field.hint,
-                        controller: _controllers[field.key],
-                        keyboardType: field.keyboardType,
-                        obscureText: _obscureMap[field.key]!,
-                        right: field.icon,
-                        validator: field.validator,
                       ),
-                    );
-                  }),
 
-                  if (_showSignature) _buildSignatureSection(),
+                      // ================= STEP 2 =================
+                      Step(
+                        title: const Text("المعلومات"),
+                        isActive: _currentStep >= 1,
+                        content: Column(
+                          children: [
+                            ...fields.map((field) {
+                              if (field.key == "description") {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 15),
+                                  child:
+                                  _buildParagraphField(field),
+                                );
+                              }
 
-                  const SizedBox(height: 10),
+                              if (field.options != null &&
+                                  field.options!.isNotEmpty) {
+                                return Padding(
+                                  padding:
+                                  const EdgeInsets.only(
+                                      bottom: 15),
+                                  child: NewRoundSelectField(
+                                    hintText: field.hint,
+                                    options: field.options!,
+                                    controller:
+                                    _controllers[field.key],
+                                    validator: field.validator,
+                                    rightIcon: field.icon,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _meetingType = value;
+                                        _showSignature =
+                                            value ==
+                                                "مع العميل";
+                                      });
+                                    },
+                                  ),
+                                );
+                              }
+                              return Padding(
+                                padding:
+                                const EdgeInsets.only(
+                                    bottom: 15),
+                                child: NewRoundTextField(
+                                  hintText: field.hint,
+                                  controller:
+                                  _controllers[field.key],
+                                  keyboardType:
+                                  field.keyboardType,
+                                  obscureText:
+                                  _obscureMap[field.key]!,
+                                  right: field.icon,
+                                  validator: field.validator,
+                                ),
+                              );
+                            }),
+                            if (_meetingType == "مع العميل")
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 15),
+                                child:
+                                NewRoundSelectField(
+                                  hintText: "اختيار العميل",
+                                  enableSearch:true,
+                                  options: customers.map((c) => c.firstName ?? "").toList(),
+                                  controller: customerCtrl,
+                                  rightIcon: const Icon(Icons.person),
+                                  onChanged: (value) {
+                                    final customer = customers.firstWhere((c) => c.firstName == value);
+                                    selectedCustomerId = customer.id;
+                                    selectedCustomerPhone = customer.phone;
+                                  },
+                                ),
+                              ),
+                            if (_meetingType == "مع الموظفين")
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 15),
+                                child: NewRoundSelectField(
+                                  hintText: "اختيار الموظف",
+                                  options: employees.map((e) => e.firstName ?? "").toList(),
+                                  controller: employeeCtrl,
+                                  rightIcon: const Icon(Icons.account_circle),
+                                  onChanged: (value) {
+                                    final employee = employees.firstWhere((e) => e.firstName == value);
+                                    selectedEmployeeId = employee.id;
+                                  },
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  bottom: 15),
+                              child: NewRoundSelectField(
+                                hintText: "اختيار المهندس",
+                                enableSearch: true,
+                                options: engineers
+                                    .map((e) =>
+                                e.firstName ?? "")
+                                    .toList(),
+                                controller: engineerCtrl,
+                                rightIcon: const Icon(
+                                    Icons.engineering),
+                                onChanged: (value) {
+                                  final engineer =
+                                  engineers.firstWhere(
+                                          (e) =>
+                                      e.firstName ==
+                                          value);
+                                  selectedEngineerId =
+                                      engineer.id;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                  // Select engineer / customer / employee
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 15),
-                    child: NewRoundSelectField(
-                      hintText: "اختيار المهندس",
-                        enableSearch:true,
-                      options: engineers.map((e) => e.firstName ?? "").toList(),
-                      controller: engineerCtrl,
-                      rightIcon: const Icon(Icons.engineering),
-                      onChanged: (value) {
-                        final engineer = engineers.firstWhere((e) => e.firstName == value);
-                        selectedEngineerId = engineer.id;
-                      },
-                    ),
+                      // ================= STEP 3 =================
+                      Step(
+                        title: const Text("التوقيع"),
+                        isActive: _currentStep >= 2,
+                        content: Column(
+                          children: [
+                            //if (_showSignature)
+                              _buildSignatureSection(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  if (_meetingType == "مع العميل")
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 15),
-                      child:
-                      NewRoundSelectField(
-                        hintText: "اختيار العميل",
-                        enableSearch:true,
-                        options: customers.map((c) => c.firstName ?? "").toList(),
-                        controller: customerCtrl,
-                        rightIcon: const Icon(Icons.person),
-                        onChanged: (value) {
-                          final customer = customers.firstWhere((c) => c.firstName == value);
-                          selectedCustomerId = customer.id;
-                          selectedCustomerPhone = customer.phone;
-                        },
-                      ),
-                    ),
-                  if (_meetingType == "مع الموظفين")
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 15),
-                      child: NewRoundSelectField(
-                        hintText: "اختيار الموظف",
-                        options: employees.map((e) => e.firstName ?? "").toList(),
-                        controller: employeeCtrl,
-                        rightIcon: const Icon(Icons.account_circle),
-                        onChanged: (value) {
-                          final employee = employees.firstWhere((e) => e.firstName == value);
-                          selectedEmployeeId = employee.id;
-                        },
-                      ),
-                    ),
-                  // Buttons
-                  Row(
-                    children: [
+                ),
+
+                const SizedBox(height: 15),
+
+                // ================= BUTTONS =================
+                Row(
+                  children: [
+                    // 🔹 زر الغاء/إغلاق في Step 0
+                    if (_currentStep == 0)
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: TColor.secondary),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 15),
                           ),
-                          onPressed: () => Navigator.pop(context),
-                          child: Text("إلغاء", style: TextStyle(fontFamily: 'Tajawal', fontSize: 16, fontWeight: FontWeight.bold, color: TColor.secondary)),
+                          onPressed: () => Navigator.pop(context), // يغلق الفورم
+                          child: Text(
+                            "إلغاء",
+                            style: TextStyle(
+                              fontFamily: 'Tajawal',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: TColor.secondary,
+                            ),
+                          ),
                         ),
                       ),
+
+                    // 🔹 زر الرجوع
+                    if (_currentStep > 0)
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: TColor.secondary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                          ),
+                          onPressed: () => setState(() => _currentStep--),
+                          child: Text(
+                            "رجوع",
+                            style: TextStyle(
+                              fontFamily: 'Tajawal',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: TColor.secondary,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if ((_currentStep > 0 && _currentStep < 3) || _currentStep == 0)
                       const SizedBox(width: 15),
+
+                    // 🔹 زر التالي
+                    if (_currentStep < 2)
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TColor.primary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                          ),
+                          onPressed: () => setState(() => _currentStep++),
+                          child: const Text(
+                            "التالي",
+                            style: TextStyle(
+                              fontFamily: 'Tajawal',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // 🔹 زر الإرسال في Step 2
+                    if (_currentStep == 2) ...[
+                      if (_currentStep > 0) const SizedBox(width: 15),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: TColor.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 15),
                           ),
                           onPressed: _isSubmitting
-                              ? null // ⛔ bouton désactivé
+                              ? null
                               : () async {
                             if (_formKey.currentState!.validate()) {
                               setState(() => _isSubmitting = true); // 🔒 LOCK
 
                               try {
                                 // ================= UPLOAD IMAGES =================
-                                List<String> uploadedUrls = [];
-                                for (var img in _selectedImages) {
-                                  final url = await _uploadImageToFirebase(img);
-                                  if (url != null) uploadedUrls.add(url);
+                                List<Map<String, String>> uploadedImagesWithRemarks = [];
+
+                                for (var group in _imageGroups) {
+                                  for (var img in group.images) {
+                                    final url = await _uploadImageToFirebase(img);
+                                    if (url != null) {
+                                      uploadedImagesWithRemarks.add({
+                                        "url": url,
+                                        "remark": group.remark,
+                                      });
+                                    }
+                                  }
                                 }
+
 
                                 // ================= UPLOAD SIGNATURE =================
                                 if (_showSignature && !_signatureController.isEmpty) {
@@ -575,7 +759,6 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                     signatureUrl = await _uploadSignatureToFirebase(bytes);
                                   }
                                 }
-
                                 final meeting = Meeting(
                                   description: _controllers["description"]!.text.trim(),
                                   titleMeeting: _controllers["titleMeeting"]!.text.trim(),
@@ -585,15 +768,15 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                   nameEmployee: employeeCtrl.text.trim(),
                                   uidEmployee: selectedEmployeeId,
                                   nameCustomer: customerCtrl.text.trim(),
-                                  commentCtrl:commentCtrl.text.trim(),
                                   uidCustomer: selectedCustomerId,
-                                  imageUrls: uploadedUrls,
+                                  imageUrlsWithRemarks: uploadedImagesWithRemarks, // <-- ici
                                   signatureUrl: signatureUrl,
                                   customerPhone: selectedCustomerPhone,
                                 );
 
                                 final addMeetingUseCase = sl<AddMeetingUseCase>();
-                                final result = await addMeetingUseCase.call(params: meeting);
+                                final result =
+                                await addMeetingUseCase.call(params: meeting);
 
                                 result.fold(
                                       (failure) {
@@ -619,8 +802,10 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                     );
 
                                     widget.onAdd({
-                                      "description": _controllers["description"]!.text.trim(),
-                                      "titleMeeting": _controllers["titleMeeting"]!.text.trim(),
+                                      "description":
+                                      _controllers["description"]!.text.trim(),
+                                      "titleMeeting":
+                                      _controllers["titleMeeting"]!.text.trim(),
                                       "type": _controllers["type"]!.text.trim(),
                                       "nameEngineer": engineerCtrl.text.trim(),
                                       "uidEngineer": selectedEngineerId ?? "",
@@ -628,7 +813,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                       "uidEmployee": selectedEmployeeId ?? "",
                                       "nameCustomer": customerCtrl.text.trim(),
                                       "uidCustomer": selectedCustomerId ?? "",
-                                      "imageUrls": uploadedUrls,
+                                      "imageUrlsWithRemarks": uploadedImagesWithRemarks,
                                       "signatureUrl": signatureUrl ?? "",
                                       "customerPhone": selectedCustomerPhone ?? "",
                                     });
@@ -649,19 +834,350 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                               }
                             }
                           },
-                          child: Text(widget.submitButtonText, style: const TextStyle(fontFamily: 'Tajawal', fontSize: 16, fontWeight: FontWeight.bold)),
+
+                          child: Text(
+                            widget.submitButtonText,
+                            style: const TextStyle(
+                              fontFamily: 'Tajawal',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                  ],
+                ),
+
+              ],
             ),
           ),
         ),
       ),
     );
   }
+  /* _buildSelectedImagesWithRemarks() {
+    const double cardSize = 130;
+
+    List<Widget> widgets = [];
+
+    for (int g = 0; g < _imageGroups.length; g++) {
+      final group = _imageGroups[g];
+
+      widgets.add(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Affiche les images du groupe
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: group.images.map((img) {
+                  return Stack(
+                    children: [
+                      Container(
+                        width: cardSize,
+                        height: cardSize,
+                        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          image: DecorationImage(
+                            image: kIsWeb
+                                ? NetworkImage(img.path)
+                                : FileImage(File(img.path)) as ImageProvider,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+
+            // Champ de remarque pour le groupe
+            NewRoundTextField(
+              maxLines: 3,
+              right: const Icon(Icons.receipt, color: Colors.grey),
+              hintText: "ملاحظة على هذه المجموعة من الصور",
+              initialValue: group.remark,
+              onChanged: (v) => group.remark = v,
+            ),
+
+            // Optionnel : bouton supprimer le groupe
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                onPressed: () {
+                  setState(() {
+                    _imageGroups.removeAt(g);
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Bouton Ajouter un nouveau groupe
+    widgets.add(
+      GestureDetector(
+        onTap: _pickImage,
+        child: Container(
+          width: cardSize,
+          height: cardSize,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Icon(Icons.add_a_photo, size: 45, color: Colors.grey),
+        ),
+      ),
+    );
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+  }*/
+
+ /* Widget _buildSelectedImagesWithRemarks() {
+    const double cardSize = 130;
+
+    // 🔹 Si aucun groupe → afficher seulement l’icône +
+    if (_imageGroups.isEmpty) {
+      return Center(
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _imageGroups.add(ImageGroup(images: [], remark: ""));
+            });
+          },
+          child: Container(
+            width: cardSize,
+            height: cardSize,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.add_a_photo, size: 45, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // 🔹 Sinon afficher les groupes existants
+    return Column(
+      children: [
+        ..._imageGroups.asMap().entries.map((entry) {
+          int index = entry.key;
+          ImageGroup group = entry.value;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              /// 🖼️ Images du groupe
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: group.images.map((img) {
+                    return Container(
+                      width: cardSize,
+                      height: cardSize,
+                      margin: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        image: DecorationImage(
+                          image: kIsWeb
+                              ? NetworkImage(img.path)
+                              : FileImage(File(img.path)) as ImageProvider,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              /// ➕ Ajouter image dans le même groupe
+              TextButton.icon(
+                onPressed: () async {
+                  final XFile? image = await _picker.pickImage(
+                    source: ImageSource.camera,
+                    imageQuality: 80,
+                  );
+
+                  if (image != null) {
+                    setState(() {
+                      group.images.add(image);
+                    });
+                  }
+                },
+                icon: const Icon(Icons.camera_alt),
+                label: const Text("إضافة صورة"),
+              ),
+
+              /// 📝 Remarque
+              NewRoundTextField(
+                maxLines: 3,
+                hintText: "ملاحظة على هذه المجموعة من الصور",
+                initialValue: group.remark,
+                onChanged: (v) => group.remark = v,
+              ),
+
+              /// 🗑 Supprimer groupe
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _imageGroups.removeAt(index);
+                    });
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 15),
+            ],
+          );
+        }).toList(),
+
+        /// 🔹 Bouton ajouter nouveau groupe
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _imageGroups.add(ImageGroup(images: [], remark: ""));
+            });
+          },
+          child: Container(
+            width: cardSize,
+            height: cardSize,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.add, size: 45, color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }*/
+
+  Widget _buildSelectedImagesWithRemarks() {
+    const double cardSize = 130;
+
+    // 🔹 Aucun groupe → afficher icône +
+    if (_imageGroups.isEmpty) {
+      return Center(
+        child: GestureDetector(
+          onTap: () => _pickImage(), // 🔥 créer nouveau groupe
+          child: Container(
+            width: cardSize,
+            height: cardSize,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.add_a_photo, size: 45, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        ..._imageGroups.asMap().entries.map((entry) {
+          int index = entry.key;
+          ImageGroup group = entry.value;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              /// 🖼️ Images
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ...group.images.map((img) {
+                      return Container(
+                        width: cardSize,
+                        height: cardSize,
+                        margin: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          image: DecorationImage(
+                            image: kIsWeb
+                                ? NetworkImage(img.path)
+                                : FileImage(File(img.path)) as ImageProvider,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+
+                    /// ➕ Ajouter image dans même groupe
+                    GestureDetector(
+                      onTap: () => _pickImage(groupIndex: index),
+                      child: Container(
+                        width: cardSize,
+                        height: cardSize,
+                        margin: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.add, size: 40),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              /// 📝 Remarque
+              NewRoundTextField(
+                maxLines: 3,
+                hintText: "ملاحظة على هذه المجموعة من الصور",
+                initialValue: group.remark,
+                onChanged: (v) => group.remark = v,
+              ),
+
+              /// 🗑 Supprimer groupe
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _imageGroups.removeAt(index);
+                    });
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 15),
+            ],
+          );
+        }).toList(),
+
+        /// 🔹 Nouveau groupe
+        GestureDetector(
+          onTap: () => _pickImage(), // 🔥 nouveau groupe
+          child: Container(
+            width: cardSize,
+            height: cardSize,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.add_a_photo, size: 45),
+          ),
+        ),
+      ],
+    );
+  }
+
+
 }
 

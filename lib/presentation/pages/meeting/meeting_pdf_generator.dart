@@ -12,7 +12,24 @@ class MeetingPdfGenerator {
   static Future<pw.Document> generate({
     required Meeting meeting,
   }) async {
+
+
     final pdf = pw.Document();
+// 🔹 Images avec remarques
+    List<Map<String, dynamic>> imagesWithRemarks = [];
+
+    if (meeting.imageUrlsWithRemarks != null &&
+        meeting.imageUrlsWithRemarks!.isNotEmpty) {
+      for (final item in meeting.imageUrlsWithRemarks!) {
+        final img = await imageFromUrl(item['url']);
+        if (img != null) {
+          imagesWithRemarks.add({
+            "image": img,
+            "remark": item['remark'] ?? "",
+          });
+        }
+      }
+    }
 
     // ⚠️ Police arabe et emoji
     final arabicFont = pw.Font.ttf(await rootBundle.load("assets/font/NotoSansArabic-Regular.ttf"));
@@ -60,6 +77,7 @@ class MeetingPdfGenerator {
             arabicFont,
             meetingImages: meetingImages,
             signatureImage: signatureImage,
+            imagesWithRemarks: imagesWithRemarks,
           ),
         ],
       ),
@@ -75,6 +93,7 @@ class MeetingPdfGenerator {
       pw.Font arabicFont, {
         List<pw.ImageProvider>? meetingImages,
         pw.ImageProvider? signatureImage,
+        List<Map<String, dynamic>>? imagesWithRemarks,
       }) {
     String formatDate(DateTime? date) {
       if (date == null) return "-";
@@ -163,7 +182,7 @@ class MeetingPdfGenerator {
 
           // 🔸 Images
           // 🔸 Images
-          if (meetingImages != null && meetingImages.isNotEmpty) ...[
+         /* if (meetingImages != null && meetingImages.isNotEmpty) ...[
             pw.SizedBox(height: 22),
             pw.Text(
               "صور الاجتماع",
@@ -195,38 +214,72 @@ class MeetingPdfGenerator {
               }).toList(),
             ),
 
-            // 🔹 COMMENTAIRE CLIENT
-            if (meeting.commentCtrl != null && meeting.commentCtrl!.isNotEmpty) ...[
-              pw.SizedBox(height: 18),
-              pw.Text(
-                "ملاحظات الاجتماع:",
-                style: pw.TextStyle(
-                  font: arabicFont,
-                  fontSize: 13,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColor.fromHex('#022C43'),
-                ),
-                textDirection: pw.TextDirection.rtl,
+          ],*/
+
+// 🔸 Images avec remarques
+          // 🔸 Images avec remarques
+          if (imagesWithRemarks != null && imagesWithRemarks.isNotEmpty) ...[
+            pw.SizedBox(height: 22),
+            pw.Text(
+              "صور الاجتماع مع الملاحظات",
+              style: pw.TextStyle(
+                font: arabicFont,
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromHex('#022C43'),
               ),
-              pw.SizedBox(height: 6),
-              pw.Container(
-                width: double.infinity,
+            ),
+            pw.SizedBox(height: 12),
+
+            ...imagesWithRemarks.map((item) {
+              final pw.ImageProvider img = item['image'];
+              final String remark = item['remark'];
+
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 18),
                 padding: const pw.EdgeInsets.all(10),
                 decoration: pw.BoxDecoration(
-                  color: PdfColor.fromHex('#F0F0F0'),
-                  borderRadius: pw.BorderRadius.circular(8),
+                  color: PdfColors.white,
+                  borderRadius: pw.BorderRadius.circular(14),
+                  border: pw.Border.all(color: PdfColors.grey300),
                 ),
-                child: pw.Text(
-                  meeting.commentCtrl!,
-                  style: pw.TextStyle(
-                    font: arabicFont,
-                    fontSize: 12,
-                    color: PdfColors.black,
-                  ),
-                  textDirection: pw.TextDirection.rtl,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.ClipRRect(
+                      horizontalRadius: 12,
+                      verticalRadius: 12,
+                      child: pw.Image(
+                        img,
+                        height: 150,
+                        //width: PdfPageFormat.a4.availableWidth,
+                        fit: pw.BoxFit.cover,
+                      ),
+                    ),
+                    if (remark.isNotEmpty) ...[
+                      pw.SizedBox(height: 8),
+                      pw.Container(
+                        width: double.infinity,
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor.fromHex('#F5F5F5'),
+                          borderRadius: pw.BorderRadius.circular(10),
+                        ),
+                        child: pw.Text(
+                          remark,
+                          style: pw.TextStyle(
+                            font: arabicFont,
+                            fontSize: 12,
+                            color: PdfColors.grey800,
+                          ),
+                          textDirection: pw.TextDirection.rtl,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-            ],
+              );
+            }).toList(),
           ],
 
 
@@ -234,7 +287,7 @@ class MeetingPdfGenerator {
           if (signatureImage != null && meeting.type == "مع العميل") ...[
             pw.SizedBox(height: 26),
             pw.Text(
-              "توقيع العميل",
+              "توقيع ",
               style: pw.TextStyle(
                 font: arabicFont,
                 fontSize: 14,

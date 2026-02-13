@@ -409,8 +409,7 @@ class _MeetingPageState extends State<MeetingPage> {
                         imageUrls:values["imageUrls"],
                         signatureUrl: values["signatureUrl"],
                         customerPhone: values['customerPhone'],
-                        commentCtrl: values['commentCtrl'],
-
+                        imageUrlsWithRemarks: values['imageUrlsWithRemarks'],
                       ),
                     );
 
@@ -439,12 +438,6 @@ class _MeetingPageState extends State<MeetingPage> {
     // Champs du formulaire
     final List<generic_modal.FormFieldConfig> fields = [
       generic_modal.FormFieldConfig(
-        key: "commentCtrl",
-        hint: "ملاحظات متعلقة بالصور",
-        icon: const Icon(Icons.receipt, color: Colors.grey),
-        isParagraph: true,
-      ),
-      generic_modal.FormFieldConfig(
         key: "titleMeeting",
         hint: "عنوان الاجتماع",
         icon: const Icon(Icons.title, color: Colors.grey),
@@ -454,15 +447,13 @@ class _MeetingPageState extends State<MeetingPage> {
         key: "description",
         hint: "تفاصيل الاجتماع",
         icon: const Icon(Icons.description, color: Colors.grey),
-        maxLines: null, // null = s'adapte au contenu
+        maxLines: null,
         minLines: 5,
         isParagraph: true,
-
       ),
       generic_modal.FormFieldConfig(
         key: "type",
         hint: "نوع الاجتماع",
-        maxLines: 5,
         icon: const Icon(Icons.category, color: Colors.grey),
         options: ["مع العميل", "مع الموظفين"],
         isParagraph: true,
@@ -471,7 +462,6 @@ class _MeetingPageState extends State<MeetingPage> {
         key: "nameEngineer",
         hint: "المهندس",
         icon: const Icon(Icons.engineering, color: Colors.grey),
-
       ),
       generic_modal.FormFieldConfig(
         key: "nameEmployee",
@@ -484,13 +474,10 @@ class _MeetingPageState extends State<MeetingPage> {
         maxLines: 2,
         icon: const Icon(Icons.person, color: Colors.grey),
       ),
-
     ];
 
-    // Valeurs initiales
     final Map<String, String> initialValues = {
       "titleMeeting": meeting.titleMeeting ?? "",
-      "commentCtrl": meeting.commentCtrl ?? "لا توجد أي ملاحظات حول الصور",
       "description": meeting.description ?? "",
       "type": meeting.type ?? "",
       "nameEngineer": meeting.nameEngineer ?? "",
@@ -502,119 +489,139 @@ class _MeetingPageState extends State<MeetingPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.85,
-          builder: (_, controller) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-              ),
-              child: SingleChildScrollView(
-                controller: controller,
-                child: Column(
-                  children: [
-                    generic_modal.GenericFormModal(
-                      fields: fields,
-                      initialValues: initialValues,
-                      title: "تفاصيل الاجتماع",
-                      submitButtonText: "إغلاق",
-                      includeImagePicker: false,
-                      includeFilePicker: false,
-                      readOnly: true,
-                      onSubmit: (values) => Navigator.pop(context),
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.85,
+        builder: (_, controller) => Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: SingleChildScrollView(
+            controller: controller,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // TITRE DU MODAL
+                Center(
+                  child: Text(
+                    "تفاصيل الاجتماع",
+                    style: TextStyle(
+                      fontFamily: "Tajawal",
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: TColor.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-                      // 👇👇👇 IMAGE AVANT LES BOUTONS
-                      topWidget: (meeting.imageUrls != null && meeting.imageUrls!.isNotEmpty) ||
-                          (meeting.signatureUrl != null && meeting.signatureUrl!.isNotEmpty)
-                          ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-
-                          // 📷 صورة الاجتماع
-                          if (meeting.imageUrls != null && meeting.imageUrls!.isNotEmpty) ...[
-                            const Text(
-                              "📷 الصورة المرفقة للاجتماع",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: "Tajawal",
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 200,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: meeting.imageUrls!.length,
-                                itemBuilder: (context, i) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Image.network(
-                                        meeting.imageUrls![i],
-                                        width: 200,
-                                        height: 200,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 25),
-                          ],
-                          // ✍️ توقيع العميل
-                          if (meeting.signatureUrl != null &&
-                              meeting.signatureUrl!.isNotEmpty &&
-                              meeting.type == "مع العميل") ...[
-                            const Text(
-                              "✍️ توقيع",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: "Tajawal",
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                // IMAGE AVEC REMARQUES
+                if (meeting.imageUrlsWithRemarks != null &&
+                    meeting.imageUrlsWithRemarks!.isNotEmpty) ...[
+                  const Text(
+                    "📷 الصور مع الملاحظات",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: "Tajawal",
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Column(
+                    children: meeting.imageUrlsWithRemarks!.map((imageItem) {
+                      return Card(
+                        elevation: 3,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
                                 child: Image.network(
-                                  meeting.signatureUrl!,
-                                  height: 150,
-                                  fit: BoxFit.contain,
+                                  imageItem['url'] ?? "",
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 25),
-                          ],
-                        ],
-                      )
-                          : null,
-                      // 👆👆👆 FIN IMAGE
+                              const SizedBox(height: 8),
+                              if ((imageItem['remark'] ?? "").isNotEmpty)
+                                Text(
+                                  imageItem['remark'] ?? "",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontFamily: "Tajawal",
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // SIGNATURE CLIENT
+                if (meeting.signatureUrl != null &&
+                    meeting.signatureUrl!.isNotEmpty &&
+                    meeting.type == "مع العميل") ...[
+                  const Text(
+                    "✍️ توقيع ",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: "Tajawal",
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          meeting.signatureUrl!,
+                          height: 150,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                ],
+
+                // FORMULAIRE LISIBLE
+                generic_modal.GenericFormModal(
+                  fields: fields,
+                  title:"تفاصيل الخاصة بالاجتماع",
+                  initialValues: initialValues,
+                  submitButtonText: "إغلاق",
+                  includeImagePicker: false,
+                  includeFilePicker: false,
+                  readOnly: true,
+                  onSubmit: (values) => Navigator.pop(context),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
+
   Widget _buildMeetingCard(BuildContext context, Meeting meeting) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -727,10 +734,7 @@ class _MeetingPageState extends State<MeetingPage> {
       ),
     );
   }
-  Widget _buildMeetingInfoRow(
-      IconData icon,
-      String? value,
-      ) {
+  Widget _buildMeetingInfoRow(IconData icon, String? value,) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(

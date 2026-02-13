@@ -16,8 +16,7 @@ class Meeting {
   List<String>? imageUrls;
   String? signatureUrl;
   String? customerPhone;
-  String? commentCtrl;
-
+  List<Map<String, String>>? imageUrlsWithRemarks;
   Meeting({
     this.id,
     this.titleMeeting,
@@ -32,8 +31,8 @@ class Meeting {
     this.uidEngineer,
     this.imageUrls,
     this.signatureUrl,
+    this.imageUrlsWithRemarks,
     this.customerPhone,
-    this.commentCtrl,
   }) : dateMeeting = dateMeeting ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
@@ -52,7 +51,9 @@ class Meeting {
       'imageUrls': imageUrls,
       'signatureUrl': signatureUrl,
       'customerPhone': customerPhone,
-      'commentCtrl': commentCtrl,
+      'imageUrlsWithRemarks': imageUrlsWithRemarks,
+
+
 
     };
   }
@@ -79,7 +80,11 @@ class Meeting {
           : null,
       signatureUrl: map['signatureUrl'],
       customerPhone: map['customerPhone'],
-      commentCtrl: map['commentCtrl'],
+      imageUrlsWithRemarks: map['imageUrlsWithRemarks'] != null
+          ? (map['imageUrlsWithRemarks'] as List)
+          .map((e) => Map<String, String>.from(e))
+          .toList()
+          : null,
     );
   }
 

@@ -35,6 +35,7 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
   final ImagePicker _picker = ImagePicker();
   late final CreateNotificationUseCase _createNotificationUseCase;
   late String? currentUserId;
+  List<List<TaskItem>> _taskGroups = [];
 
   @override
   void initState() {
@@ -61,7 +62,7 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
     await _createNotificationUseCase.call(notification: notif);
   }
   // ===== Pick Image with Camera or Gallery =====
-  Future<void> _pickImage() async {
+  Future<void> _pickImage({int? groupIndex}) async {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -69,53 +70,98 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
       ),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(20),
-        child: FractionallySizedBox(
-          heightFactor: 0.25,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.green),
-                title: const Text("التقط صورة بالكاميرا"),
-                onTap: () async {
-                  final pickedFile = await _picker.pickImage(source: ImageSource.camera);
-                  if (pickedFile != null && mounted) _uploadAndAddImage(pickedFile);
-                  Navigator.pop(context);
-                },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+
+            const Text(
+              "اختيار مصدر الصورة",
+              style: TextStyle(
+                fontFamily: "Tajawal",
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.blue),
-                title: const Text("اختيار صورة من المعرض"),
-                onTap: () async {
-                  final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-                  if (pickedFile != null && mounted) _uploadAndAddImage(pickedFile);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 20),
+
+            /// 📷 Camera
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.green),
+              title: const Text("التقط صورة بالكاميرا"),
+              onTap: () async {
+                Navigator.pop(context);
+
+                final pickedFile =
+                await _picker.pickImage(source: ImageSource.camera);
+
+                if (pickedFile != null && mounted) {
+                  if (groupIndex != null) {
+                    _uploadAndAddImage(pickedFile, groupIndex);
+                  } else {
+                    setState(() {
+                      _taskGroups.add([]);
+                    });
+                    _uploadAndAddImage(
+                        pickedFile, _taskGroups.length - 1);
+                  }
+                }
+              },
+            ),
+
+            /// 🖼️ Galerie (🔥 ajouté)
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text("اختيار من المعرض"),
+              onTap: () async {
+                Navigator.pop(context);
+
+                final List<XFile> images =
+                await _picker.pickMultiImage();
+
+                if (images.isNotEmpty && mounted) {
+                  if (groupIndex != null) {
+                    for (var img in images) {
+                      _uploadAndAddImage(img, groupIndex);
+                    }
+                  } else {
+                    setState(() {
+                      _taskGroups.add([]);
+                    });
+
+                    int newIndex = _taskGroups.length - 1;
+
+                    for (var img in images) {
+                      _uploadAndAddImage(img, newIndex);
+                    }
+                  }
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Future<void> _uploadAndAddImage(XFile pickedFile) async {
-    // Créer un item temporaire avec l'image locale
+  Future<void> _uploadAndAddImage(XFile pickedFile, int groupIndex) async {
     final tempItem = TaskItem(
-      imageUrl: pickedFile.path, // utiliser le chemin local pour l'affichage immédiat
+      imageUrl: pickedFile.path,
       remark: "",
-      isUploading: true, // marqueur pour savoir que c'est en cours d'upload
+      isUploading: true,
     );
 
     setState(() {
-      task.items.add(tempItem);
+      _taskGroups[groupIndex].add(tempItem);
     });
 
     try {
-      final fileName = "site_tasks/${DateTime.now().millisecondsSinceEpoch}_${path.basename(pickedFile.path)}";
+      final fileName =
+          "site_tasks/${DateTime.now().millisecondsSinceEpoch}_${path.basename(pickedFile.path)}";
       final storageRef = FirebaseStorage.instance.ref(fileName);
 
       String uploadedUrl;
+
       if (kIsWeb) {
         final bytes = await pickedFile.readAsBytes();
         final uploadTask = await storageRef.putData(bytes);
@@ -126,90 +172,164 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
         uploadedUrl = await uploadTask.ref.getDownloadURL();
       }
 
-      // Remplacer l'image locale par l'URL Firebase
       setState(() {
         tempItem.imageUrl = uploadedUrl;
         tempItem.isUploading = false;
       });
     } catch (e) {
       setState(() {
-        task.items.remove(tempItem);
+        _taskGroups[groupIndex].remove(tempItem);
       });
-      CustomSnackBar.show(context, message: "خطأ في تحميل الصورة", type: SnackBarType.error);
     }
   }
+
 
 
   // ===== Build the Images + Remarks widget for GenericFormModal =====
   Widget _imagesWithRemarksWidget() {
-    const double cardSize = 100;
-    List<Widget> widgets = [];
+    const double cardSize = 110;
 
-    for (int i = 0; i < task.items.length; i++) {
-      final item = task.items[i];
-
-      widgets.add(Stack(
-        children: [
-          Container(
+    // 🔹 Aucun groupe → afficher icône +
+    if (_taskGroups.isEmpty) {
+      return Center(
+        child: GestureDetector(
+          onTap: () => _pickImage(),
+          child: Container(
             width: cardSize,
             height: cardSize,
-            margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              image: item.isUploading
-                  ? null
-                  : DecorationImage(
-                image: item.imageUrl.startsWith("http")
-                    ? NetworkImage(item.imageUrl)
-                    : FileImage(File(item.imageUrl)) as ImageProvider,
-                fit: BoxFit.cover,
-              ),
-              color: item.isUploading ? Colors.grey.shade300 : null,
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: item.isUploading
-                ? const Center(child: CircularProgressIndicator())
-                : null,
+            child: const Icon(Icons.add_a_photo, size: 40),
           ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: () => setState(() => task.items.removeAt(i)),
-              child: const Icon(Icons.cancel, color: Colors.red, size: 22),
-            ),
-          ),
-        ],
-      ));
-
-      widgets.add(Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: NewRoundTextField(
-          hintText: "ملاحظة على الصورة",
-          onChanged: (v) => item.remark = v ?? "",
         ),
-      ));
+      );
     }
-
-    // Bouton Ajouter Image
-    widgets.add(GestureDetector(
-      onTap: _pickImage,
-      child: Container(
-        width: cardSize,
-        height: cardSize,
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: const Icon(Icons.add_a_photo, color: Colors.grey, size: 35),
-      ),
-    ));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: widgets,
+      children: [
+
+        ..._taskGroups.asMap().entries.map((entry) {
+          int groupIndex = entry.key;
+          List<TaskItem> group = entry.value;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              /// Images horizontales
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+
+                    ...group.map((item) {
+                      return Stack(
+                        children: [
+                          Container(
+                            width: cardSize,
+                            height: cardSize,
+                            margin: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              image: item.isUploading
+                                  ? null
+                                  : DecorationImage(
+                                image: item.imageUrl.startsWith("http")
+                                    ? NetworkImage(item.imageUrl)
+                                    : FileImage(File(item.imageUrl))
+                                as ImageProvider,
+                                fit: BoxFit.cover,
+                              ),
+                              color: item.isUploading
+                                  ? Colors.grey.shade300
+                                  : null,
+                            ),
+                            child: item.isUploading
+                                ? const Center(
+                                child: CircularProgressIndicator())
+                                : null,
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                group.remove(item);
+                              }),
+                              child: const Icon(Icons.cancel,
+                                  color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+
+                    /// ➕ Ajouter image dans groupe
+                    GestureDetector(
+                      onTap: () =>
+                          _pickImage(groupIndex: groupIndex),
+                      child: Container(
+                        width: cardSize,
+                        height: cardSize,
+                        margin: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(Icons.add, size: 35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              /// 📝 Remarque du groupe
+              NewRoundTextField(
+                hintText: "ملاحظة على هذه المجموعة من الصور",
+                maxLines: 3,
+                onChanged: (v) {
+                  if (group.isNotEmpty) {
+                    group.first.remark = v ?? "";
+                  }
+                },
+              ),
+
+              /// 🗑 Supprimer groupe
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_forever,
+                      color: Colors.red),
+                  onPressed: () =>
+                      setState(() => _taskGroups.removeAt(groupIndex)),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+            ],
+          );
+        }).toList(),
+
+        /// 🔹 Nouveau groupe
+        GestureDetector(
+          onTap: () => _pickImage(),
+          child: Container(
+            width: cardSize,
+            height: cardSize,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.add_a_photo, size: 40),
+          ),
+        ),
+      ],
     );
   }
+
 
 
   @override
@@ -218,27 +338,51 @@ class _AddSiteTasksModalState extends State<AddSiteTasksModal> {
       title: "تفاصيل زيارة الموقع",
       submitButtonText: "تأكيد",
       onSubmit: (values) async {
-        final service = sl<NewSiteFirebaseService>();
-        final result = await service.updateTasksForSite(widget.siteId, task, generalRemarkCtrl.text.trim());
 
+        // 🔥 IMPORTANT : convertir les groupes en task.items
+        task.items.clear();
+
+        for (var group in _taskGroups) {
+          task.items.addAll(group);
+        }
+
+        final service = sl<NewSiteFirebaseService>();
+
+        final result = await service.updateTasksForSite(
+          widget.siteId,
+          task,
+          generalRemarkCtrl.text.trim(),
+        );
 
         result.fold(
-              (failure) => CustomSnackBar.show(context, message: failure.toString(), type: SnackBarType.error),
+              (failure) => CustomSnackBar.show(
+              context,
+              message: failure.toString(),
+              type: SnackBarType.error
+          ),
               (success) {
-            CustomSnackBar.show(context, message: "تمت إضافة المهام بنجاح.", type: SnackBarType.success);
-            final customerName = widget.site.customerName ?? "غير معروف";
+            CustomSnackBar.show(
+                context,
+                message: "تمت إضافة المهام بنجاح.",
+                type: SnackBarType.success
+            );
+
+            final customerName =
+                widget.site.customerName ?? "غير معروف";
 
             _sendNotification(
               title: "إضافة المهام للموقع الجديد",
-              message: "تم إضافة المهام للموقع الجديد للعميل : $customerName",
+              message:
+              "تم إضافة المهام للموقع الجديد للعميل : $customerName",
               route: "/home",
               userId: currentUserId,
             );
+
             Navigator.pop(context);
           },
         );
-
       },
+
       topWidget: _imagesWithRemarksWidget(),
       fields: [
         FormFieldConfig(
