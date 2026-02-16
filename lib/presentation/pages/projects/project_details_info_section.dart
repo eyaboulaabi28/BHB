@@ -175,7 +175,7 @@ class ProjectDetailsInfoSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 15),
                   _infoRow(Icons.person, "المالك:", project.ownerName),
-                  _infoRow(Icons.location_on, "البلدية:", project.municipality),
+                  //_infoRow(Icons.location_on, "البلدية:", project.municipality),
                   _infoRow(Icons.badge, "رقم الرخصة:", project.licenseNumber),
                   _infoRow(Icons.apartment, "نوع المبنى:", project.buildingType),
                   _infoRow(Icons.date_range, "تاريخ التقرير:", project.reportDate),

@@ -403,7 +403,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
             const SizedBox(height: 10),
 
             // Détails principaux
-            _buildInfoRow(Icons.location_on, "البلدية:", project.municipality),
+            //_buildInfoRow(Icons.location_on, "البلدية:", project.municipality),
             _buildInfoRow(Icons.person, "المالك:", project.ownerName),
             _buildInfoRow(Icons.badge, "رقم الرخصة:", project.licenseNumber),
             _buildInfoRow(Icons.business, "نوع المبنى:", project.buildingType),

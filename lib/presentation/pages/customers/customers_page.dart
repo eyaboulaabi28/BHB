@@ -7,6 +7,7 @@ import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/notifications_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_customers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_projects.dart';
 import 'package:app_bhb/presentation/pages/customers/add_customer_modal.dart';
 import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -124,16 +125,12 @@ class _CustomersPageState extends State<CustomersPage> {
         setState(() {
           customers.removeWhere((e) => e.id == customerId);
         });
-
-        // إرسال إشعار للعميل نفسه
-         _sendNotification(
-        title: "حذف عميل",
-        message: "تم حذف العميل: ${deletedCustomer.firstName ?? ""}",
-        route: "/home",
-        targetRole: "customer",
-        userId: deletedCustomer.id,  // الإشعار يذهب لهذا العميل فقط
+        CustomSnackBar.show(
+          context,
+          message: "تم حذف العميل: ${deletedCustomer.firstName ?? ""}",
+          type: SnackBarType.success,
         );
-
+        _fetchCustomers();
         // إرسال إشعار للـ admin
              _sendNotification(
             title: "حذف عميل",
@@ -568,35 +565,28 @@ class _CustomersPageState extends State<CustomersPage> {
         floatingActionButton: FloatingActionButton(
           backgroundColor: TColor.primary,
           shape: const CircleBorder(),
-          onPressed: () {
-            showModalBottomSheet(
+          onPressed: () async {
+            final parentContext = context;
+
+            await showModalBottomSheet(
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
               builder: (context) => AddCustomerModal(
-                parentContext: context,
+                parentContext: parentContext,
                 title: "إضافة عميل جديد",
                 submitButtonText: "إضافة",
-                onAdd: (values) {
-                  setState(() {
-                    customers.add(
-                         Customers(
-                           id: values["id"],
-                           firstName:values["name"],
-                          email:values["email"] ,
-                          type:values["type"],
-                          phone:values["phone"],
-                           latitude: values["latitude"],
-                           longitude: values["longitude"],
-                        ),
-                    );
-                  });
-                },
+                onSubmit: (_) {},
+                onAdd: (values) {},
               ),
             );
+
+            /// 🔥 Après fermeture du modal
+            _fetchCustomers();
           },
           child: const Icon(Icons.add, color: Colors.white, size: 32),
         ),
+
 
 
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
