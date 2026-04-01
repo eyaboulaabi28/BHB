@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Attendance {
   String? id;
   String? employeeName;
@@ -10,7 +12,7 @@ class Attendance {
   DateTime? createdAt;
   String? employeeId;
   String? notes;
-
+  String? status;
   Attendance({
     this.id,
     this.employeeId,
@@ -22,6 +24,7 @@ class Attendance {
     this.signatureUrl,
     this.customerName,
     this.notes,
+    this.status,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -37,7 +40,8 @@ class Attendance {
       'customerName': customerName,
       'employeeId': employeeId,
       'notes': notes,
-      'createdAt': createdAt?.toIso8601String(),
+      'createdAt': createdAt,
+      'status': status,
     };
   }
 
@@ -62,9 +66,13 @@ class Attendance {
       signatureUrl: map['signatureUrl'],
       customerName: map['customerName'],
       createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
+          ? (map['createdAt'] is Timestamp
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(map['createdAt']))
           : null,
+
       notes: map['notes'],
+      status: map['status'],
     );
   }
 

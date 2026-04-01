@@ -796,10 +796,11 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                     _sendNotification(
                                       title: "اجتماع جديد",
                                       message:
-                                      "تم إضافة اجتماع جديد: ${_controllers["titleMeeting"]!.text.trim()}",
+                                      "تم إضافة اجتماع جديد بعنوان ${_controllers["titleMeeting"]!.text.trim()} للعميل ${customerCtrl.text.trim()}",
                                       userId: selectedCustomerId,
                                       route: "/home",
                                     );
+
 
                                     widget.onAdd({
                                       "description":

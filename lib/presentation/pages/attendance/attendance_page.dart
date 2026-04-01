@@ -1,27 +1,20 @@
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import 'package:app_bhb/common_widget/custom_bottom_nav.dart';
-import 'package:app_bhb/common_widget/custom_dialog.dart';
 import 'package:app_bhb/common_widget/custom_search_bar.dart';
-import 'package:app_bhb/common_widget/round_textfield.dart';
+import 'package:app_bhb/data/auth/models/attendance_model.dart';
 import 'package:app_bhb/data/auth/models/employees_model.dart';
-import 'package:app_bhb/data/auth/models/notifications_model.dart';
-import 'package:app_bhb/data/auth/source/notification_service.dart';
+import 'package:app_bhb/data/auth/models/user_creation_req.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_attendance.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_employees.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
+import 'package:app_bhb/presentation/pages/attendance/AttendancePdfGeneratorAll.dart';
 import 'package:app_bhb/presentation/pages/attendance/add_attendance_modal.dart';
 import 'package:app_bhb/presentation/pages/attendance/attendance_details_page.dart';
-import 'package:app_bhb/presentation/pages/customers/select_location_map.dart';
-import 'package:app_bhb/presentation/pages/employees/add_employee_modal.dart';
-import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:app_bhb/common_widget/generic_form_modal.dart' as generic_modal;
-import 'package:geocoding/geocoding.dart';
 import '../../../service_locator.dart';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AttendancePage extends StatefulWidget {
   final String selectedType;
@@ -36,10 +29,11 @@ class AttendancePage extends StatefulWidget {
 
 class _AttendancePageState extends State<AttendancePage> {
   int _selectedIndex = 0;
-
+  UserCreationReq user = UserCreationReq();
   late final GetEmployeeUseCase _getAllEmployeeUseCase;
   late final CreateNotificationUseCase _createNotificationUseCase;
-
+  late final IsEmployeePresentTodayUseCase _isEmployeePresentToday;
+  Map<String, bool>? _employeesPresence;
   List<Employees> employees = [];
   List<Employees> filteredEmployees = [];
 
@@ -50,8 +44,88 @@ class _AttendancePageState extends State<AttendancePage> {
     super.initState();
     _getAllEmployeeUseCase = sl<GetEmployeeUseCase>();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
-    _fetchEmployees();
+    _isEmployeePresentToday = sl<IsEmployeePresentTodayUseCase>();
+    _loadCurrentUserProfile();
+    _fetchEmployees().then((_) {
+      _checkAndCreateAbsences();
+      _checkEmployeesPresence();
+    });
   }
+
+  Future<void> _loadCurrentUserProfile() async {
+    final fbUser = FirebaseAuth.instance.currentUser;
+
+    if (fbUser == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(fbUser.uid)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        setState(() {
+          user = UserCreationReq.fromMap(doc.data()!);
+        });
+      }
+    } catch (e) {
+      print("Error fetching user: $e");
+    }
+  }
+
+  Future<void> _checkEmployeesPresence() async {
+    Map<String, bool> presenceMap = {};
+    for (var employee in employees) {
+      final isPresent = await sl<IsEmployeePresentTodayUseCase>()
+          .call(employee.id!);
+      presenceMap[employee.id!] = isPresent;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _employeesPresence = presenceMap;
+    });
+  }
+
+
+  Future<void> _checkAndCreateAbsences() async {
+    final now = DateTime.now();
+
+    // 🟢 On prend hier
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+
+    for (var employee in employees) {
+      final isPresent = await _isEmployeePresentToday.call(
+        employee.id!,
+        date: yesterday,
+      );
+
+      if (!isPresent) {
+        // 🔴 Vérifier si absence déjà créée
+        final existing = await FirebaseFirestore.instance
+            .collection('attendance')
+            .where('employeeId', isEqualTo: employee.id)
+            .where('status', isEqualTo: 'absent')
+            .where('startTime',
+            isEqualTo: yesterday.toIso8601String())
+            .get();
+
+        if (existing.docs.isEmpty) {
+          await FirebaseFirestore.instance.collection('attendance').add({
+            'employeeId': employee.id,
+            'employeeName': employee.firstName,
+            'status': 'absent',
+            'startTime': yesterday.toIso8601String(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    }
+  }
+
+
+
 
   Future<void> _fetchEmployees() async {
     final result = await _getAllEmployeeUseCase.call();
@@ -141,6 +215,45 @@ class _AttendancePageState extends State<AttendancePage> {
                 );
               },
             ),
+            const SizedBox(height: 15),
+            // Bouton PDF complet avec texte et icône
+            ElevatedButton.icon(
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text("تقرير مفصل حول سجل حضور الموظفين"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                // Récupérer toutes les présences depuis Firestore
+                Map<String, List<Attendance>> allAttendances = {};
+
+                for (var employee in employees) {
+                  final snapshot = await FirebaseFirestore.instance
+                      .collection('attendance')
+                      .where('employeeId', isEqualTo: employee.id)
+                      .get();
+
+                  final attendanceList = snapshot.docs.map((doc) {
+                    return Attendance.fromMap(doc.id, doc.data());
+                  }).toList();
+
+
+                  allAttendances[employee.id!] = attendanceList;
+                }
+
+                // Générer le PDF
+                await AttendancePdfGeneratorAll.generateAndOpenPdf(
+                  employees: employees,
+                  allAttendances: allAttendances,
+                  context: context,
+                );
+              },
+
+            ),
             const SizedBox(height: 10),
             Expanded(
               child: filteredEmployees.isEmpty
@@ -153,102 +266,117 @@ class _AttendancePageState extends State<AttendancePage> {
                   ),
                 ),
               )
-                  : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: filteredEmployees.length,
-                  itemBuilder: (context, index) {
-                    final employee = filteredEmployees[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child:
-                        Row(
-                          textDirection: TextDirection.rtl,
-                          children: [
-                            CircleAvatar(
-                              radius: 25,
-                              backgroundColor: TColor.secondary.withOpacity(0.2),
-                              child: Icon(Icons.manage_accounts, color: TColor.primary),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    employee.firstName ?? "",
-                                    style: const TextStyle(
-                                      fontFamily: 'Tajawal',
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    employee.email ?? "",
-                                    style: const TextStyle(
-                                      fontFamily: 'Tajawal',
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.phone, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 5),
-                                      Expanded(
-                                        child: Text(
-                                          employee.phone ?? "",
-                                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14, color: Colors.grey),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // ✅ Nouveau bouton Add
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // 👁️ زر التفاصيل
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.visibility,
-                                    color: Colors.blue,
-                                    size: 26,
-                                  ),
-                                  tooltip: "عرض التفاصيل",
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AttendanceDetailsPage(
-                                          employee: employee,
-                                          selectedType: widget.selectedType,
-                                          projectName: widget.projectName,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                  :
+              ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: filteredEmployees.length,
+                itemBuilder: (context, index) {
+                  final employee = filteredEmployees[index];
+                  final isAlreadyPresent = _employeesPresence?[employee.id!] ?? false;
 
-                                // ➕ زر إضافة الحضور
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.add_circle,
-                                    color: Colors.green,
-                                    size: 28,
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.all(15),
+                      child: Row(
+                        textDirection: TextDirection.rtl,
+                        children: [
+                          CircleAvatar(
+                            radius: 25,
+                            backgroundColor: TColor.secondary.withOpacity(0.2),
+                            child: Icon(Icons.manage_accounts, color: TColor.primary),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  employee.firstName ?? "",
+                                  style: const TextStyle(
+                                    fontFamily: 'Tajawal',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  tooltip: "إضافة حضور",
-                                  onPressed: () {
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  employee.email ?? "",
+                                  style: const TextStyle(
+                                    fontFamily: 'Tajawal',
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Row(
+                                  children: [
+                                    Icon(Icons.phone, size: 16, color: Colors.grey),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        employee.phone ?? "",
+                                        style: const TextStyle(
+                                            fontFamily: 'Tajawal',
+                                            fontSize: 14,
+                                            color: Colors.grey),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 👁️ Bouton détails
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.visibility,
+                                  color: Colors.blue,
+                                  size: 26,
+                                ),
+                                tooltip: "عرض التفاصيل",
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => AttendanceDetailsPage(
+                                        employee: employee,
+                                        selectedType: widget.selectedType,
+                                        projectName: widget.projectName,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              // ➕ Bouton ajouter présence
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.add_circle,
+                                  color: Colors.green,
+                                  size: 28,
+                                ),
+                                tooltip: isAlreadyPresent
+                                    ? "تم تسجيل الحضور اليوم"
+                                    : "إضافة حضور",
+                                onPressed: () {
+                                  if (isAlreadyPresent) {
+                                    // Afficher le SnackBar si déjà présent
+                                    CustomSnackBar.show(
+                                      context,
+                                      message: "تم تسجيل الحضور اليوم",
+                                      type: SnackBarType.info,
+                                    );
+                                  } else {
+                                    // Sinon ouvrir le modal pour ajouter la présence
                                     showModalBottomSheet(
                                       context: context,
                                       isScrollControlled: true,
@@ -257,27 +385,27 @@ class _AttendancePageState extends State<AttendancePage> {
                                         title: "إضافة حضور و الانصراف للموظف",
                                         submitButtonText: "إضافة",
                                         employeeId: employee.id!,
-                                        onAdd: (values) {
-                                          setState(() {
-                                          });
-                                        },
-                                        // ✅ Passer le nom de l'employé
                                         initialEmployeeName: employee.firstName,
+                                        userRole: user.role ?? "",
+                                        onAdd: (values) {
+
+                                          _checkEmployeesPresence();
+                                        },
                                       ),
-
                                     );
-                                  },
-                                ),
-                              ],
-                            ),
-
-                          ],
-                        )
-
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
+                    ),
+                  );
+                },
+              )
 
-                  }),
+
             ),
           ],
         ),

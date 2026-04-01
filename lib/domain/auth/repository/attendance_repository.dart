@@ -5,6 +5,10 @@ abstract class AttendanceRepository {
   Future<Either> addAttendance(Attendance attendance);
   Future<Either> getAllAttendance();
   Future<Either> getAttendanceById(String id);
-  Future<Either> getAttendanceByEmployeeAndMonth(String employeeId, DateTime month,);
+  Future<Either> getAttendanceByEmployeeAndDateRange(
+      String employeeId, DateTime start, DateTime end);
+
+  Future<bool> isEmployeePresentToday(String employeeId, {DateTime? date});
+
 
 }

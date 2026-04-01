@@ -29,31 +29,54 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
   DateTime selectedMonth = DateTime.now();
   List<Attendance> attendances = [];
   bool isLoading = false;
+  DateTime? startDate;
+  DateTime? endDate;
 
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadAttendances();
+    _loadAttendancesByDateRange();
   }
-  Future<void> _loadAttendances() async {
+  Future<void> _loadAttendancesByDateRange() async {
+    if (startDate == null || endDate == null) {
+      CustomSnackBar.show(
+        context,
+        message: "يرجى اختيار تاريخ البداية والنهاية",
+        type: SnackBarType.info,
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
+
+    // ✅ ضبط بداية اليوم
+    final start = DateTime(
+      startDate!.year,
+      startDate!.month,
+      startDate!.day,
+      0, 0, 0,
+    );
+
+    // ✅ ضبط نهاية اليوم 23:59:59
+    final end = DateTime(
+      endDate!.year,
+      endDate!.month,
+      endDate!.day,
+      23, 59, 59,
+    );
 
     final result = await sl<GetAttendanceByEmployeeAndMonthUseCase>().call(
       params: {
         'employeeId': widget.employee.id,
-        'month': selectedMonth,
+        'start': start,
+        'end': end,
       },
     );
 
     result.fold(
-          (l) {
-        // Affiche l'erreur dans la console
-        print("Erreur lors du chargement des présences : $l");
-        // Affiche l'erreur dans le SnackBar
-        CustomSnackBar.show(context, message: l, type: SnackBarType.error);
-      },
+          (l) => CustomSnackBar.show(context, message: l, type: SnackBarType.error),
           (r) => setState(() => attendances = List<Attendance>.from(r)),
     );
 
@@ -118,34 +141,70 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
             ),
 
             const SizedBox(height: 25),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.calendar_month),
-              label: Text("${selectedMonth.year}-${selectedMonth.month}"),
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedMonth,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  helpText: "اختر الشهر",
-                  locale: const Locale('ar'),
-                  builder: (context, child) {
-                    return Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: child!,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(startDate != null
+                      ? "من: ${startDate!.year}-${startDate!.month.toString().padLeft(2,'0')}-${startDate!.day.toString().padLeft(2,'0')}"
+                      : "اختر تاريخ البداية"),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: startDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      helpText: "اختر تاريخ البداية",
+                      locale: const Locale('ar'),
                     );
+                    if (picked != null) {
+                      setState(() => startDate = picked);
+                    }
                   },
-                );
-
-                if (picked != null) {
-                  setState(() => selectedMonth = picked);
-                  _loadAttendances();
-                }
-              },
+                ),
+                const SizedBox(width: 15),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(endDate != null
+                      ? "إلى: ${endDate!.year}-${endDate!.month.toString().padLeft(2,'0')}-${endDate!.day.toString().padLeft(2,'0')}"
+                      : "اختر تاريخ النهاية"),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: endDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      helpText: "اختر تاريخ النهاية",
+                      locale: const Locale('ar'),
+                    );
+                    if (picked != null) {
+                      setState(() => endDate = picked);
+                    }
+                  },
+                ),
+                const SizedBox(width: 15),
+                ElevatedButton(
+                  onPressed: () {
+                    if (startDate != null && endDate != null) {
+                      _loadAttendancesByDateRange();
+                    } else {
+                      CustomSnackBar.show(context,
+                          message: "يرجى اختيار تاريخ البداية والنهاية",
+                          type: SnackBarType.info);
+                    }
+                  },
+                  child: const Text("بحث"),
+                ),
+              ],
             ),
+
+
             const SizedBox(height: 15),
             // Bouton PDF complet avec texte et icône
             ElevatedButton.icon(
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text("تقرير مفصل حول سجل حضور الموظف"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -153,27 +212,22 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              icon: const Icon(Icons.picture_as_pdf, color: Colors.white, size: 24),
-              label: const Text(
-                "تقرير مفصل حول سجل حضور الموظف",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'Tajawal',
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
               onPressed: () async {
-                // ✅ Appel simple de la classe, tout est géré à l'intérieur
-                await AttendancePdfGenerator.generateAndOpenPdf(
-                  attendances: attendances,
-                  employeeName: widget.employee.firstName ?? "",
-                  month: selectedMonth,
-                  context: context, // pour pouvoir afficher SnackBar si nécessaire
-                );
+                if (startDate != null && endDate != null) {
+                  await AttendancePdfGenerator.generateAndOpenPdf(
+                    attendances: attendances,
+                    employeeName: widget.employee.firstName ?? "",
+                    startDate: startDate!,
+                    endDate: endDate!,
+                    context: context,
+                  );
+                } else {
+                  CustomSnackBar.show(context,
+                      message: "يرجى اختيار تاريخ البداية والنهاية",
+                      type: SnackBarType.info);
+                }
               },
             ),
-
 
             const SizedBox(height: 15),
             Expanded(
@@ -268,7 +322,6 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                     ],
                                   ),
 
-
                                 const SizedBox(height: 10),
 
                                 // Customer
@@ -316,6 +369,26 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                         ),
                                       ],
                                     ),
+                                    if (a.status != null)
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            a.status == 'present' ? Icons.check_circle : Icons.cancel,
+                                            size: 20,
+                                            color: a.status == 'present' ? Colors.green : Colors.red,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            a.status == 'present' ? "حاضر" : "غائب",
+                                            style: const TextStyle(
+                                              fontFamily: 'Tajawal',
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+
                                   ],
                                 ),
 

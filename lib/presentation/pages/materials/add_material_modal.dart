@@ -293,13 +293,16 @@ class _AddMateriaModalState extends State<AddMateriaModal> {
                                     route: null,
                                   );
 
-
+                                  final engineerName = engineers
+                                      .firstWhere((e) => e.id == selectedEngineerId)
+                                      .firstName;
                                   widget.onAdd({
                                     "id": newMaterial.id ?? "",
                                     "stage": newMaterial.stage ?? "",
                                     "unit": newMaterial.unit ?? "",
                                     "description": newMaterial.description ?? "",
                                     "engineerId": newMaterial.engineerId ?? "",
+                                    "engineerName": engineerName ?? "",
                                   });
 
                                   Navigator.pop(context);

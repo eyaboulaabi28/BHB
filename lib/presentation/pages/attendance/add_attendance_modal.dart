@@ -41,6 +41,7 @@ class AddAttendanceModal extends StatefulWidget {
   final String submitButtonText;
   final String? initialEmployeeName;
   final String employeeId;
+  final String? userRole;
   const AddAttendanceModal({
     super.key,
     required this.onAdd,
@@ -48,6 +49,7 @@ class AddAttendanceModal extends StatefulWidget {
     this.submitButtonText = "إضافة",
     this.initialEmployeeName,
     required this.employeeId,
+    this.userRole,
   });
 
   @override
@@ -67,6 +69,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
   String? selectedCustomerId;
   String? signatureUrl;
   String? hoursErrorMessage;
+  bool get isAdmin => widget.userRole == "admin";
 
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
@@ -81,6 +84,9 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
     _controllers = {
       "employeeName": TextEditingController(text: widget.initialEmployeeName ?? ""),
       "date": TextEditingController(text: _formatDate(DateTime.now())),
+     // "startTime": TextEditingController(text: "05:00"),
+      //"endTime": TextEditingController(text: "12:00"),
+      //  "endTime": TextEditingController(text: "00:10"),
       "startTime": TextEditingController(text: "06:30"),
       "endTime": TextEditingController(text: "16:30"),
       "waitingHours": TextEditingController(),
@@ -134,6 +140,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
 
   Future<void> _loadCustomers() async {
     final result = await sl<GetCustomerUseCase>().call();
+    if (!mounted) return;
     result.fold(
           (e) => debugPrint("Error customers"),
           (list) => setState(() => customers = List<Customers>.from(list)),
@@ -294,32 +301,68 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("بداية الدوام",
-                    style: TextStyle(
+                Row(
+                  children: [
+                    const Text(
+                      "بداية الدوام",
+                      style: TextStyle(
                         fontFamily: 'Tajawal',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey)),
+                        color: Colors.grey,
+                      ),
+                    ),
+                    if (isAdmin) ...[
+                      const SizedBox(width: 8),
+                      const Text(
+                        "(الرجاء إدخال الوقت بصيغة: ساعة:دقيقة مثل 08:30)",
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                          fontFamily: 'Tajawal',
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
                 const SizedBox(height: 5),
                 NewRoundTextField(
                   hintText: "بداية الدوام",
                   controller: _controllers["startTime"],
                   right: const Icon(Icons.login),
-                  readOnly: true,
+                  readOnly: !isAdmin,
                 ),
                 const SizedBox(height: 12),
-                const Text("نهاية الدوام",
-                    style: TextStyle(
+                Row(
+                  children: [
+                    const Text(
+                      "نهاية الدوام",
+                      style: TextStyle(
                         fontFamily: 'Tajawal',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey)),
+                        color: Colors.grey,
+                      ),
+                    ),
+                    if (isAdmin) ...[
+                      const SizedBox(width: 8),
+                      const Text(
+                        "(الرجاء إدخال الوقت بصيغة: ساعة:دقيقة مثل 08:30)",
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                          fontFamily: 'Tajawal',
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
                 const SizedBox(height: 5),
                 NewRoundTextField(
                   hintText: "نهاية الدوام",
                   controller: _controllers["endTime"],
                   right: const Icon(Icons.logout),
-                  readOnly: true,
+                  readOnly: !isAdmin,
                 ),
                 const SizedBox(height: 12),
                 const Text("نوع الساعات",
@@ -578,6 +621,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             customerName: customerCtrl.text.trim(),
                             signatureUrl: signatureUrl,
                             notes: _controllers["notes"]?.text.trim(),
+                            status: "present",
                           );
 
                           // 🔹 Ajouter dans Firebase
@@ -586,9 +630,10 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
 
                           result.fold(
                                 (l) {
+                                  Navigator.pop(context);
                               CustomSnackBar.show(
                                 context,
-                                message: "حدث خطأ: $l",
+                                message: l.toString(),
                                 type: SnackBarType.error,
                               );
                               setState(() => _isSubmitting = false);

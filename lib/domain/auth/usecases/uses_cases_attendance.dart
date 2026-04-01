@@ -6,10 +6,18 @@ import '../../../service_locator.dart';
 
 
 
-class AddAttendanceUseCase implements UseCase<Either,Attendance> {
+class AddAttendanceUseCase implements UseCase<Either, Attendance> {
   @override
   Future<Either> call({Attendance? params}) async {
-    return await sl<AttendanceRepository>().addAttendance(params!);
+    // Vérifier si l'employé est déjà présent aujourd'hui
+    final alreadyPresent = await sl<AttendanceRepository>()
+        .isEmployeePresentToday(params!.employeeId!);
+
+    if (alreadyPresent) {
+      return Left("لا يمكن إضافة حضور أكثر من مرة في نفس اليوم");
+    }
+
+    return await sl<AttendanceRepository>().addAttendance(params);
   }
 }
 class GetAttendanceUseCase implements UseCase<Either, void> {
@@ -40,10 +48,20 @@ class GetAttendanceByEmployeeAndMonthUseCase implements UseCase<Either, Map<Stri
 
   @override
   Future<Either> call({Map<String, dynamic>? params}) {
-    return repo.getAttendanceByEmployeeAndMonth(
+    return repo.getAttendanceByEmployeeAndDateRange(
       params!['employeeId'],
-      params['month'],
+      params['start'], // <-- utilise 'start' et non 'startDate'
+      params['end'],   // <-- utilise 'end' et non 'endDate'
     );
+
   }
 }
+class IsEmployeePresentTodayUseCase {
+  Future<bool> call(String employeeId, {DateTime? date}) async {
+    return await sl<AttendanceRepository>()
+        .isEmployeePresentToday(employeeId, date: date);
+  }
+}
+
+
 

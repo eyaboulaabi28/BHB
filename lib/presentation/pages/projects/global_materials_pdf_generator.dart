@@ -17,7 +17,25 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../service_locator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+Future<String> getEngineerNameById(String engineerId) async {
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection('engineers')
+        .doc(engineerId)
+        .get();
+
+    if (doc.exists) {
+      return doc['name'] ?? '-';
+    } else {
+      return '-';
+    }
+  } catch (e) {
+    print("Erreur récupération ingénieur: $e");
+    return '-';
+  }
+}
 class GlobalMaterialsPdfGenerator {
   final String projectId;
 
@@ -41,8 +59,7 @@ class GlobalMaterialsPdfGenerator {
       await rootBundle.load("assets/font/NotoEmoji-Regular.ttf"),
     );
 
-    final materialsResult =
-    await _materialsUseCase.call(params: projectId);
+    final materialsResult = await _materialsUseCase.call(params: projectId);
 
     materialsResult.fold(
           (failure) {
@@ -56,7 +73,17 @@ class GlobalMaterialsPdfGenerator {
         projectMaterials = materials as List<Materials>;
       },
     );
+    /// 🔹 Préparer mapping engineerId → engineerName
+    final Map<String, String> engineerNames = {};
 
+    for (var material in projectMaterials) {
+      if (material.engineerId != null && material.engineerId!.isNotEmpty) {
+        final engineerId = material.engineerId!.trim();
+        final name = await getEngineerNameById(engineerId);
+        print('EngineerId: $engineerId => Name: $name');
+        engineerNames[engineerId] = name;
+      }
+    }
     CustomSnackBar.show(
       context,
       message: " جاري إنشاء ملف PDF...",
@@ -326,7 +353,13 @@ class GlobalMaterialsPdfGenerator {
           else
             ...projectMaterials.map((m) {
               final img = materialImages[m.id ?? m.stage ?? ''];
-              return buildMaterialCard(m, arabicFont, emojiFont, img);
+              return buildMaterialCard(
+                m,
+                arabicFont,
+                emojiFont,
+                img,
+                engineerNames: engineerNames,
+              );
             }).toList(),
           buildFinalWarning(arabicFont, emojiFont),
 
@@ -534,6 +567,7 @@ pw.Widget buildMaterialCard(
     pw.Font emojiFont,
     pw.ImageProvider? image, {
       bool isAlternate = false,
+      required Map<String, String> engineerNames,
     }) {
   final PdfColor primaryColor =
   isAlternate ? PdfColor.fromHex('#B8860B') : PdfColor.fromHex('#21206C');
@@ -604,6 +638,7 @@ pw.Widget buildMaterialCard(
         ),
 
         /// 📄 BODY (RTL)
+        /// 📄 BODY (RTL)
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
           alignment: pw.Alignment.centerRight,
@@ -644,6 +679,41 @@ pw.Widget buildMaterialCard(
                   ),
                 ],
               ),
+
+              pw.SizedBox(height: 4),
+
+              /// 📝 Description
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    material.description ?? "-",
+                    style: pw.TextStyle(
+                      font: arabicFont,
+                      fontSize: 11,
+                      color: PdfColor.fromHex('#333333'),
+                    ),
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                  pw.SizedBox(width: 4),
+                  pw.Text(
+                    "الوصف:",
+                    style: pw.TextStyle(
+                      font: arabicFont,
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#333333'),
+                    ),
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 4),
+
+              /// 🏗 Project ID
+
+              pw.SizedBox(height: 4),
 
               /// 🖼 IMAGE (à droite)
               if (image != null) ...[

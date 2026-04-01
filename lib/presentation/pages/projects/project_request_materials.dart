@@ -1,6 +1,8 @@
+import 'package:app_bhb/data/auth/models/engineers_model.dart';
 import 'package:app_bhb/data/auth/models/materials_model.dart';
 import 'package:app_bhb/data/auth/source/notification_service.dart';
 import 'package:app_bhb/domain/auth/usecases/materials_usecases.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/materials/add_material_modal.dart';
 import 'package:app_bhb/presentation/pages/projects/global_materials_pdf_generator.dart';
@@ -24,15 +26,26 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
 
   final List<Map<String, dynamic>> _requestMaterials = [];
   late final NotificationService _notificationService;
-
+  List<Engineer> engineers = [];
   @override
   void initState() {
     super.initState();
-    _loadRequestMaterials();
+    _initData();
     _notificationService = NotificationService(sl<CreateNotificationUseCase>());
-
   }
 
+  Future<void> _initData() async {
+    await _loadEngineers();
+    await _loadRequestMaterials();
+  }
+  Future<void> _loadEngineers() async {
+    final result = await sl<GetEngineersUseCase>().call();
+
+    result.fold(
+          (e) => debugPrint("Error engineers: $e"),
+          (list) => engineers = List<Engineer>.from(list),
+    );
+  }
   Future<void> _loadRequestMaterials() async {
     if (widget.projectId == null) return;
 
@@ -51,11 +64,19 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
         setState(() {
           _requestMaterials.clear();
           _requestMaterials.addAll(
-            (materialsList as List<Materials>).map((m) => {
-              'projectId': m.projectId,
-              'stage': m.stage,
-              'unit': m.unit,
-              'description': m.description,
+            (materialsList as List<Materials>).map((m) {
+              final engineer = engineers.firstWhere(
+                    (e) => e.id == m.engineerId,
+                orElse: () => Engineer(firstName: "غير معروف"),
+              );
+
+              return {
+                'projectId': m.projectId,
+                'stage': m.stage,
+                'unit': m.unit,
+                'description': m.description,
+                'engineerName': engineer.firstName,
+              };
             }),
           );
         });
@@ -74,18 +95,6 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
         return AddMateriaModal(
           projectId: widget.projectId,
           onAdd: (values) async {
-            // 🔴 validation
-            if (values["name"] == null ||
-                values["name"].toString().isEmpty ||
-                values["unit"] == null ||
-                values["unit"].toString().isEmpty) {
-              CustomSnackBar.show(
-                parentContext,
-                message: "يرجى تعبئة جميع الحقول",
-                type: SnackBarType.error,
-              );
-              return;
-            }
 
             // ⏳ loading
             CustomSnackBar.show(
@@ -102,9 +111,10 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
             setState(() {
               _requestMaterials.add({
                 'projectId': widget.projectId,
-                'name': values["name"],
+                'stage': values["stage"],
                 'unit': values["unit"],
-                'image': values["image"],
+                'description': values["description"],
+                'engineerName': values["engineerName"],
               });
             });
 
@@ -237,7 +247,7 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        "المادة ${index + 1} : ${material['name']}",
+                        "المادة ${index + 1} ",
                         style: const TextStyle(
                           fontFamily: 'Tajawal',
                           fontSize: 18,
@@ -260,7 +270,42 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
                       ],
                     ),
                   const SizedBox(height: 8),
-                  if (material['image'] != null && material['image'] != "")
+                  if (material['stage'] != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.stacked_bar_chart, color: Colors.grey, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          "مرحلة البناء: ${material['stage']}",
+                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 8),
+                  if (material['description'] != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.description, color: Colors.grey, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          " تفاصيل المواد: ${material['description']}",
+                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 8),
+                  if (material['engineerName'] != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.engineering, color: Colors.grey, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          "المهندس: ${material['engineerName']}",
+                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 16),
+                        ),
+                      ],
+                    ),
+                /*  if (material['image'] != null && material['image'] != "")
                     Row(
                       children: [
                         const SizedBox(width: 8),
@@ -275,7 +320,7 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
                         ),
                       ],
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 8),*/
 
                 ],
               ),

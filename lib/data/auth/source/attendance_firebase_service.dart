@@ -11,7 +11,11 @@ abstract class AttendanceFirebaseService {
   Future<Either> addAttendance(Attendance attendance);
   Future<Either> getAllAttendance();
   Future<Either> getAttendanceById(String id);
-  Future<Either> getAttendanceByEmployeeAndMonth(String employeeId, DateTime month,);
+  Future<Either> getAttendanceByEmployeeAndDateRange(
+      String employeeId, DateTime start, DateTime end);
+
+  Future<bool> isEmployeePresentToday(String employeeId, {DateTime? date});
+
 }
 class AttendanceFirebaseServiceImpl extends AttendanceFirebaseService {
 
@@ -55,15 +59,13 @@ class AttendanceFirebaseServiceImpl extends AttendanceFirebaseService {
   }
 
   @override
-  Future<Either> getAttendanceByEmployeeAndMonth(String employeeId, DateTime month,) async {
+  Future<Either> getAttendanceByEmployeeAndDateRange(
+      String employeeId, DateTime start, DateTime end) async {
     try {
-      final start = DateTime(month.year, month.month, 1);
-      final end = DateTime(month.year, month.month + 1, 1);
-
       final snapshot = await _attendanceCollection
           .where('employeeId', isEqualTo: employeeId)
           .where('startTime', isGreaterThanOrEqualTo: start.toIso8601String())
-          .where('startTime', isLessThan: end.toIso8601String())
+          .where('startTime', isLessThanOrEqualTo: end.toIso8601String())
           .orderBy('startTime')
           .get();
 
@@ -76,5 +78,28 @@ class AttendanceFirebaseServiceImpl extends AttendanceFirebaseService {
       return Left(e.toString());
     }
   }
+
+
+  @override
+  Future<bool> isEmployeePresentToday(String employeeId, {DateTime? date}) async {
+    try {
+      final now = date ?? DateTime.now();
+
+      final start = DateTime(now.year, now.month, now.day);
+      final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+      final snapshot = await _attendanceCollection
+          .where('employeeId', isEqualTo: employeeId)
+          .where('startTime', isGreaterThanOrEqualTo: start.toIso8601String())
+          .where('startTime', isLessThanOrEqualTo: end.toIso8601String())
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+
 
 }
