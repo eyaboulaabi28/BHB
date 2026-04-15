@@ -13,6 +13,7 @@ import 'package:app_bhb/presentation/pages/projects/project_comments.dart';
 import 'package:app_bhb/presentation/pages/projects/project_details_info_section.dart';
 import 'package:app_bhb/presentation/pages/projects/project_employees.dart';
 import 'package:app_bhb/presentation/pages/projects/project_evaluation_engineer.dart';
+import 'package:app_bhb/presentation/pages/projects/project_evaluation_technician.dart';
 import 'package:app_bhb/presentation/pages/projects/project_operational_tests.dart';
 import 'package:app_bhb/presentation/pages/projects/project_request_materials.dart';
 import 'package:app_bhb/presentation/pages/projects/project_stages_section.dart';
@@ -296,7 +297,9 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       case 6:
         return ProjectComments(projectId: widget.projectId,ownerId: _ownerId);
       case 7:
-        return ProjectEvaluationEngineer(  project: _project!,ownerId: _ownerId);
+        return ProjectEvaluationEngineer(  project: _project!,ownerId: _ownerId ,);
+      case 8:
+        return ProjectEvaluationTechnician(  project: _project!,ownerId: _ownerId);
       default:
         return const SizedBox();
     }

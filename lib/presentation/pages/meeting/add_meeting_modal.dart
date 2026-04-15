@@ -263,26 +263,21 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                /// 📷 Camera
                 ListTile(
                   leading: const Icon(Icons.camera_alt, color: Colors.blue),
                   title: const Text("التقاط صورة"),
                   onTap: () async {
                     Navigator.pop(context);
-
                     final XFile? image = await _picker.pickImage(
                       source: ImageSource.camera,
-                      imageQuality: 80,
+                      imageQuality: 60,
+                      maxWidth: 1024,
                     );
-
                     if (image != null && mounted) {
                       setState(() {
                         if (groupIndex != null) {
-                          // Ajouter dans groupe existant
                           _imageGroups[groupIndex].images.add(image);
                         } else {
-                          // Nouveau groupe
                           _imageGroups.add(
                             ImageGroup(images: [image], remark: ""),
                           );
@@ -291,8 +286,6 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                     }
                   },
                 ),
-
-                /// 🖼️ Galerie
                 ListTile(
                   leading: const Icon(Icons.photo_library, color: Colors.green),
                   title: const Text("اختيار من المعرض"),
@@ -737,19 +730,27 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
 
                               try {
                                 // ================= UPLOAD IMAGES =================
-                                List<Map<String, String>> uploadedImagesWithRemarks = [];
+                                List<Future<Map<String, String>?>> futures = [];
 
                                 for (var group in _imageGroups) {
                                   for (var img in group.images) {
-                                    final url = await _uploadImageToFirebase(img);
-                                    if (url != null) {
-                                      uploadedImagesWithRemarks.add({
-                                        "url": url,
-                                        "remark": group.remark,
-                                      });
-                                    }
+                                    futures.add(() async {
+                                      final url = await _uploadImageToFirebase(img);
+                                      if (url != null) {
+                                        return {
+                                          "url": url,
+                                          "remark": group.remark,
+                                        };
+                                      }
+                                      return null;
+                                    }());
                                   }
                                 }
+
+                                final results = await Future.wait(futures);
+
+                                List<Map<String, String>> uploadedImagesWithRemarks =
+                                results.whereType<Map<String, String>>().toList();
 
 
                                 // ================= UPLOAD SIGNATURE =================
@@ -819,6 +820,7 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                       "customerPhone": selectedCustomerPhone ?? "",
                                     });
 
+                                    if (!mounted) return;
                                     Navigator.pop(context);
                                   },
                                 );

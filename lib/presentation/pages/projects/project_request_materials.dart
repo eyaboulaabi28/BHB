@@ -6,6 +6,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_engineers.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/materials/add_material_modal.dart';
 import 'package:app_bhb/presentation/pages/projects/global_materials_pdf_generator.dart';
+import 'package:app_bhb/presentation/pages/projects/single_material_pdf_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:app_bhb/common/color_extension.dart';
@@ -242,17 +243,40 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
                     CircleAvatar(
                       radius: 22,
                       backgroundColor: TColor.primary.withOpacity(0.2),
-                      child:  Icon(Icons.inventory, color: TColor.primary),
+                      child: Icon(Icons.inventory, color: TColor.primary),
                     ),
+
                     const SizedBox(width: 12),
+
                     Expanded(
                       child: Text(
-                        "المادة ${index + 1} ",
+                        "المادة ${index + 1}",
                         style: const TextStyle(
                           fontFamily: 'Tajawal',
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
+                      ),
+                    ),
+
+                    // 👇 هذا هو الحل
+                    IconButton(
+                      onPressed: () {
+                        SingleMaterialPdfGenerator(
+                          material: Materials(
+                            id: material['id'],
+                            projectId: material['projectId'],
+                            stage: material['stage'],
+                            unit: material['unit'],
+                            description: material['description'],
+                            engineerId: null,
+                          ),
+                          projectId: widget.projectId,
+                        ).generate(context);
+                      },
+                      icon: Icon(
+                        Icons.picture_as_pdf,
+                        color: Colors.red.shade700,
                       ),
                     ),
                   ],
@@ -305,22 +329,6 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
                         ),
                       ],
                     ),
-                /*  if (material['image'] != null && material['image'] != "")
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            material['image'],
-                            height: 80,
-                            width: 80,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 8),*/
 
                 ],
               ),
@@ -331,4 +339,13 @@ class _ProjectRequestMaterialsState extends State<ProjectRequestMaterials> {
     );
   }
 
+}
+class MaterialItemPdfGenerator {
+  final Map<String, dynamic> material;
+
+  MaterialItemPdfGenerator({required this.material});
+
+  Future<void> generate(BuildContext context) async {
+    // logic PDF هنا
+  }
 }

@@ -1,51 +1,172 @@
-import 'package:app_bhb/common_widget/generic_form_modal.dart';
-import 'package:app_bhb/data/auth/models/comments_project.dart';
-import 'package:app_bhb/data/auth/models/notifications_model.dart';
+import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
+import 'package:app_bhb/data/auth/models/evaluation_engineer_model.dart';
 import 'package:app_bhb/data/auth/models/projects_model.dart';
-import 'package:app_bhb/data/auth/source/comments_project_firebase_service.dart';
-import 'package:app_bhb/data/auth/source/notification_service.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_comments_project.dart';
+import 'package:app_bhb/data/auth/models/user_creation_req.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_projects.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/common_widget/CustomSnackBar.dart';
 import '../../../service_locator.dart';
 
 class ProjectEvaluationEngineer extends StatefulWidget {
   final Project project;
   final String? ownerId;
-
   const ProjectEvaluationEngineer({super.key, required this.project, required this.ownerId});
-
   @override
   State<ProjectEvaluationEngineer> createState() => _ProjectEvaluationEngineerState();
 }
 
 class _ProjectEvaluationEngineerState extends State<ProjectEvaluationEngineer> {
+  UserCreationReq user = UserCreationReq();
   late final CreateNotificationUseCase _createNotificationUseCase;
   String? engineerName;
   bool isLoading = true;
   Map<int, int> stepsScores = {};
   int selectedTaskScore = -1;
-
+  bool get isAdmin => user.role == "admin";
+  String? selectedEngineer;
+  List<EvaluationEngineer> evaluations = [];
   @override
   void initState() {
     super.initState();
     _createNotificationUseCase = sl<CreateNotificationUseCase>();
     engineerName = widget.project.engineerName;
     isLoading = false;
+    _loadCurrentUserProfile();
+    loadEvaluations();
   }
+  Future<void> _loadCurrentUserProfile() async {
+    final fbUser = FirebaseAuth.instance.currentUser;
 
-  int calculateCardScore(int indexOffset, int numberOfSteps) {
-    int total = 0;
-    for (int i = 0; i < numberOfSteps; i++) {
-      int score = stepsScores[indexOffset + i] ?? 0;
-      total += score;
+    if (fbUser == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(fbUser.uid)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        setState(() {
+          user = UserCreationReq.fromMap(doc.data()!);
+        });
+      }
+    } catch (e) {
+      print("Error fetching user: $e");
     }
+  }
+  Future<void> loadEvaluations() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('evaluationEngineer')
+        .doc("${widget.project.id}_${widget.ownerId}")
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+
+    setState(() {
+      stepsScores.clear();
+
+      final steps = Map<String, dynamic>.from(data['steps'] ?? {});
+
+      steps.forEach((key, value) {
+        final index = int.tryParse(key);
+        if (index == null) return;
+        stepsScores[index] = value['score'];
+      });
+    });
+  }
+  int calculateTotalScore() {
+    int total = 0;
+    bool hasVeryBad = false;
+
+    for (var score in stepsScores.values) {
+      if (score == -5) {
+        hasVeryBad = true;
+      } else {
+        total += score;
+      }
+    }
+
+    // نضيف -5 مرة واحدة فقط
+    if (hasVeryBad) {
+      total -= 5;
+    }
+
     return total;
   }
 
+  Future<void> updateEvaluation({
+    required String projectId,
+    required String engineerId,
+    required String stepKey,
+    required int score,
+    required String stepText,
+  }) async {
+    final docRef = FirebaseFirestore.instance
+        .collection('evaluationEngineer')
+        .doc("${projectId}_$engineerId");
+
+    final doc = await docRef.get();
+
+    Map<String, dynamic> steps = {};
+
+    if (doc.exists) {
+      steps = Map<String, dynamic>.from(doc.data()?['steps'] ?? {});
+    }
+
+    String status = _getStatusFromScore(score);
+
+    steps[stepKey] = {
+      "score": score,
+      "status": status,
+      "text": stepText,
+    };
+
+    int total = 0;
+    bool hasVeryBad = false;
+
+    for (var s in steps.values) {
+      int val = (s["score"] as num?)?.toInt() ?? 0;
+
+      if (val == -5) {
+        hasVeryBad = true;
+      } else {
+        total += val;
+      }
+    }
+
+    if (hasVeryBad) total -= 5;
+
+    await docRef.set({
+      "idProject": projectId,
+      "idEngineer": engineerId,
+      "nameEngineer": widget.project.engineerName,
+      "steps": steps,
+      "totalScore": total,
+      "updatedAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+  String _getStatusFromScore(int score) {
+    switch (score) {
+      case 10:
+        return "ممتاز";
+      case 7:
+        return "جيد جدا";
+      case 5:
+        return "جيد";
+      case 3:
+        return "مقبول";
+      case 0:
+        return "سيء";
+      case -5:
+        return "سيء جدا";
+      default:
+        return "غير محدد";
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -118,84 +239,122 @@ class _ProjectEvaluationEngineerState extends State<ProjectEvaluationEngineer> {
           SizedBox(height: 8),
           ModernStepCard(
             title: "الدراسة الفنية للمرحلة",
+            isAdmin: (user.role == "admin"),
             steps: [
               StepItem(
+                  id: "0",
                 text: "التواصل مع العميل لتحديد موعد فحص الموقع",
                 note: "نصائح : تنسيق موعد الزياره قبل 3-4 ايام مع العميل"
               ),
               StepItem(
+                id: "1",
                 text: "دراسة المخططات وتحليل العوائق المحتمله في الموقع",
                 note: "مهم : التاكيد على اعتماد المخطط من العميل عبر التوقيع على المخطط او تاكيد الاعتماد عبر رساله واتس اب",
               ),
               StepItem(
+                id: "2",
                 text: "التحديد و التأشير للسباكة و الكهرباء ",
                 note: "نصائح : يفضل التنسيق مع العميل ويصبح متواجد في الموقع لاخذ الاستشارات الهندسيه في السلبيات و الايجابيات بناء من خبرتنا الهندسيه في التخصص ",
               ),
               StepItem(
+                id: "3",
                 text: "طلب المواد من العميل",
                 note: "مهم : طلب كميه لاتقل عن 50٪ ولا تزيد عن 70٪ لمرحله (العظم ومابعد العظم)",
               ),
             ],
             indexOffset: 0,
             scores: stepsScores,
-            onScoreChanged: (index, score) {
+            onScoreChanged: (index, score, stepText) async {
               setState(() {
                 stepsScores[index] = score;
               });
+
+              await updateEvaluation(
+                projectId: widget.project.id!,
+                engineerId: widget.ownerId!,
+                stepKey: index.toString(),
+                score: score,
+                stepText: stepText,
+              );
             },
           ),
           ModernStepCard(
             title: "بداية المرحلة التسليم إلى الفني",
+            isAdmin: (user.role == "admin"),
             steps: [
               StepItem(
+                id: "4",
                 text: "اضافه صور التسليم في التقرير",
                 note: "نصائح: صور جميع نقاط المرحلة للتاكد من تحليل المسارات قبل تسليم المهام للفني (قبل العمل)",
               ),
               StepItem(
+                id: "5",
                 text: "التأكد من عدم وجود عوائق قبل تسليم المهام في الموقع",
                 note: "مثل: نقص ادوات العمل او نقص المواد او عدم توصيل المعلومة للفني",
               ),
               StepItem(
+                id: "6",
                 text: "فحص جودة العمل و المقاسات و المستوى و الميول في الموقع بشكل دوري",
                 note: "مهم: لا يقل عن 4 ايام في الاسبوع",
               ),
             ],
             scores: stepsScores,
             indexOffset: 100,
-            onScoreChanged: (index, score) {
+            onScoreChanged: (index, score, stepText) async {
               setState(() {
                 stepsScores[index] = score;
               });
+
+              await updateEvaluation(
+                projectId: widget.project.id!,
+                engineerId: widget.ownerId!,
+                stepKey: index.toString(),
+                score: score,
+                stepText: stepText,
+              );
             },
           ),
           ModernStepCard(
             title: "نهاية المرحلة الاستلام النهائي",
+            isAdmin: (user.role == "admin"),
             steps: [
               StepItem(
+                id: "7",
                 text: "اضافة صور الاستلام في التقرير",
                 note: "نصائح: صور كل نقطة في المرحلة أثناء استلام المهام اليومية للفني (بعد العمل)",
               ),
               StepItem(
+                id: "8",
                 text: "فحص جميع نقاط المرحلة",
                 note: "مهم جدا: فحص المبنى بالكامل والتركيز على جميع الأقسام بدون تخطي أي جزء",
               ),
               StepItem(
+                id: "9",
                 text: "التواصل مع العميل لتسليم الموقع",
                 note: "نصائح: الاستفسار عن المدة المتوقعة لحجز الموعد القادم",
               ),
             ],
             scores: stepsScores,
             indexOffset: 200,
-            onScoreChanged: (index, score) {
-              setState(() {
-                stepsScores[index] = score;
-              });
-            },
+              onScoreChanged: (index, score, stepText) async {
+                setState(() {
+                  stepsScores[index] = score;
+                });
+
+                await updateEvaluation(
+                  projectId: widget.project.id!,
+                  engineerId: widget.ownerId!,
+                  stepKey: index.toString(),
+                  score: score,
+                  stepText: stepText,
+                );
+              }
           ),
           const SizedBox(height: 16),
 
           // 🔥 Score total
-          Center(
+          if (isAdmin)
+            Center(
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
               decoration: BoxDecoration(
@@ -211,23 +370,65 @@ class _ProjectEvaluationEngineerState extends State<ProjectEvaluationEngineer> {
                 ],
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min, // Pour que le container ne prenne que la place nécessaire
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.emoji_events, color: Colors.redAccent), // Icône
-                  const SizedBox(width: 8),
-                  Text(
-                    "النتيجة الإجمالية: ${stepsScores.values.fold(0, (sum, value) => sum + value)}",
-                    style: const TextStyle(
-                      fontFamily: 'Tajawal',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.redAccent,
+                  /// SCORE
+                  Row(
+                    children: [
+                      const Icon(Icons.emoji_events, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Text(
+                        "النتيجة: ${calculateTotalScore()}",
+                        style: const TextStyle(
+                          fontFamily: 'Tajawal',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  /// BUTTON موافق
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    ),
+                    onPressed: () async {
+                      await updateEvaluation(
+                        projectId: widget.project.id!,
+                        engineerId: widget.ownerId!,
+                        stepKey: "final",
+                        score: calculateTotalScore(),
+                        stepText: "TOTAL",
+                      );
+
+                      CustomSnackBar.show(
+                        context,
+                        message: "تم حفظ التقييم النهائي",
+                        type: SnackBarType.success,
+                      );
+                    },
+                    child: const Text(
+                      "موافق",
+                      style: TextStyle(
+                        fontFamily: 'Tajawal',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),        ],
+          ),    ],
       ),
     );
   }
@@ -291,10 +492,12 @@ class ModernChoiceChip extends StatelessWidget {
   }
 }
 class StepItem {
+  final String id;
   final String text;
   final String note;
 
   StepItem({
+    required this.id,
     required this.text,
     required this.note,
   });
@@ -304,15 +507,33 @@ class ModernStepItem extends StatelessWidget {
   final int index;
   final int selectedScore;
   final Function(int) onScoreSelected;
-
+  final bool isAdmin;
   const ModernStepItem({
     super.key,
     required this.step,
     required this.index,
     required this.selectedScore,
     required this.onScoreSelected,
+    required this.isAdmin,
   });
 
+  static const Map<String, int> scoreOptions = {
+    "ممتاز": 10,
+    "جيد جدا": 7,
+    "جيد": 5,
+    "مقبول": 3,
+    "سيء": 0,
+    "سيء جدا": -5,
+  };
+
+  String? get selectedLabel {
+    return scoreOptions.entries
+        .firstWhere(
+          (e) => e.value == selectedScore,
+      orElse: () => const MapEntry("", -1),
+    )
+        .key;
+  }
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -326,7 +547,6 @@ class ModernStepItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Text(
             step.text,
             textAlign: TextAlign.right,
@@ -350,32 +570,33 @@ class ModernStepItem extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-
-              ModernChoiceChip(
-                label: "ممتاز",
-                score: 100,
-                isSelected: selectedScore == 100,
-                onSelected: () => onScoreSelected(100),
+          /// 🔥 REPLACEMENT: Chips → Select Field
+          if (isAdmin)
+            NewRoundSelectField(
+              hintText: "اختر التقييم",
+              options: scoreOptions.keys.toList(),
+              controller: TextEditingController(
+                text: selectedLabel ?? "",
               ),
-
-              ModernChoiceChip(
-                label: "جيد",
-                score: 50,
-                isSelected: selectedScore == 50,
-                onSelected: () => onScoreSelected(50),
+              onChanged: (value) {
+                if (value == null) return;
+                final score = scoreOptions[value] ?? 0;
+                onScoreSelected(score);
+              },
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                "التقييم مخفي (غير متاح لهذا المستخدم)",
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey,
+                  fontFamily: 'Tajawal',
+                ),
               ),
-
-              ModernChoiceChip(
-                label: "سيء",
-                score: 0,
-                isSelected: selectedScore == 0,
-                onSelected: () => onScoreSelected(0),
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -385,8 +606,9 @@ class ModernStepCard extends StatelessWidget {
   final String title;
   final List<StepItem> steps;
   final Map<int, int> scores;
-  final Function(int index, int score) onScoreChanged;
-  final int indexOffset;
+  final Function(int index, int score, String stepText) onScoreChanged;  final int indexOffset;
+  final bool isAdmin;
+
   const ModernStepCard({
     super.key,
     required this.title,
@@ -394,7 +616,9 @@ class ModernStepCard extends StatelessWidget {
     required this.scores,
     required this.onScoreChanged,
     required this.indexOffset,
+    required this.isAdmin,
   });
+
   int get cardScore {
     int total = 0;
     for (int i = 0; i < steps.length; i++) {
@@ -403,6 +627,7 @@ class ModernStepCard extends StatelessWidget {
     }
     return total;
   }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -415,9 +640,11 @@ class ModernStepCard extends StatelessWidget {
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+
+          /// ================= HEADER =================
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -427,9 +654,12 @@ class ModernStepCard extends StatelessWidget {
                 ),
                 child: const Icon(Icons.analytics, color: Colors.blueAccent),
               ),
+
+              const SizedBox(width: 12),
+
               Expanded(
                 child: Text(
-                  "$title — نتيجة: $cardScore",  // 🔥 Score affiché ici
+                  "$title — نتيجة: $cardScore",
                   textAlign: TextAlign.right,
                   style: const TextStyle(
                     fontFamily: 'Tajawal',
@@ -443,7 +673,7 @@ class ModernStepCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          /// STEPS
+          /// ================= STEPS =================
           ...steps.asMap().entries.map((entry) {
             int index = entry.key;
             int realIndex = index + indexOffset;
@@ -452,11 +682,40 @@ class ModernStepCard extends StatelessWidget {
               step: entry.value,
               index: realIndex,
               selectedScore: scores[realIndex] ?? -1,
+              isAdmin: isAdmin,
               onScoreSelected: (score) {
-                onScoreChanged(realIndex, score);
+                onScoreChanged(realIndex, score, entry.value.text);
               },
             );
           }),
+          const SizedBox(height: 10),
+
+          /// ================= FIXED FOOTER SPACE =================
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.only(top: 12),
+
+            /// 🔥 مهم: نفس الارتفاع دائمًا
+            height: 60,
+            child: isAdmin
+                ? const SizedBox() // select موجود داخل steps
+                : Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                "التقييم غير متاح لهذا المستخدم",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey,
+                  fontFamily: 'Tajawal',
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

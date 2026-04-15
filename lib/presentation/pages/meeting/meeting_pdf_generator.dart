@@ -244,14 +244,15 @@ class MeetingPdfGenerator {
                   border: pw.Border.all(color: PdfColors.grey300),
                 ),
                 child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
                     pw.ClipRRect(
                       horizontalRadius: 12,
                       verticalRadius: 12,
                       child: pw.Image(
                         img,
-                        height: 150,
+                        height: 300,
+                        width: 300,
                         //width: PdfPageFormat.a4.availableWidth,
                         fit: pw.BoxFit.cover,
                       ),

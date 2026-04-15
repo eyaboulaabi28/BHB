@@ -10,11 +10,13 @@ import 'package:app_bhb/presentation/pages/electronic_signature/electronic_signa
 import 'package:app_bhb/presentation/pages/employees/employees_page.dart';
 import 'package:app_bhb/presentation/pages/engineers/engineers_page.dart';
 import 'package:app_bhb/presentation/pages/engineers_evaluation/engineer_evaluation_page.dart';
+import 'package:app_bhb/presentation/pages/engineers_results/engineers_results_page.dart';
 import 'package:app_bhb/presentation/pages/materials/materials_page.dart';
 import 'package:app_bhb/presentation/pages/meeting/meeting_page.dart';
 import 'package:app_bhb/presentation/pages/new_site/new_site_page.dart';
 import 'package:app_bhb/presentation/pages/projects/projects_page.dart';
 import 'package:app_bhb/presentation/pages/settings/settings_page.dart';
+import 'package:app_bhb/presentation/pages/technician_results/technician_results_page.dart';
 import 'package:app_bhb/presentation/pages/vacation/vacation_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -214,8 +216,20 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           "page": NewSitePage(selectedType: "", projectName: ""),
           "roles": ["admin", "engineer",],
         },
-
-
+        {
+          "icon": Icons.event_available,
+          "color": Colors.pink.shade200,
+          "title": "نتائج المهندسين",
+          "page": EngineersResultsPage(selectedType: "", projectName: ""),
+          "roles": ["admin", "engineer",],
+        },
+        {
+          "icon": Icons.event_busy,
+          "color": Colors.red.shade200,
+          "title": "نتائج الفنيين",
+          "page": TechnicianResultsPage(selectedType: "", projectName: ""),
+          "roles": ["admin", "engineer",],
+        },
 
       ];
       return allItems.where((item) {
