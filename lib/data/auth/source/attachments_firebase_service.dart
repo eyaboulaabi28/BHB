@@ -27,23 +27,35 @@ class AttachmentsFirebaseServiceImpl extends AttachmentsFirebaseService {
   }
 
 
+  @override
   Future<Either<String, String>> deleteAttachment(String id) async {
     try {
       final docRef = FirebaseFirestore.instance.collection('Attachments').doc(id);
       final docSnapshot = await docRef.get();
-      if (!docSnapshot.exists) return Left("Attachment introuvable");
+
+      if (!docSnapshot.exists) {
+        return Left("Attachment introuvable");
+      }
 
       final attachment = Attachments.fromMap(docSnapshot.id, docSnapshot.data()!);
 
-      if (attachment.fileUrl != null) {
-        final storageRef = FirebaseStorage.instance.refFromURL(attachment.fileUrl!);
-        await storageRef.delete();
+      // 🔴 حذف من Storage
+      if (attachment.fileUrl != null && attachment.fileUrl!.isNotEmpty) {
+        try {
+          final storageRef = FirebaseStorage.instance.refFromURL(attachment.fileUrl!);
+          await storageRef.delete();
+        } catch (e) {
+          return Left("فشل حذف الملف من Storage: $e");
+        }
       }
 
+      // 🔴 حذف من Firestore
       await docRef.delete();
+
       return Right("تم حذف المرفق بنجاح");
+
     } catch (e) {
-      return Left(e.toString());
+      return Left("Error deleting attachment: $e");
     }
   }
 

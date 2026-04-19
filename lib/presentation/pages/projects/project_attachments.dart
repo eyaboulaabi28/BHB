@@ -99,27 +99,32 @@ class _ProjectAttachmentsState extends State<ProjectAttachments> {
     );
   }
 
+  bool isDeleting = false;
   /// Supprimer attachment
   void _deleteAttachment(Map<String, dynamic> att) async {
-    if (att["id"] == null) return;
+    if (att["id"] == null || isDeleting) return;
+
+    isDeleting = true; // 🔒 قفل
 
     final result = await sl<DeleteAttachmentUseCase>().call(params: att["id"]);
+    print("DELETE RESULT: $result");
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     result.fold(
-          (failure) => CustomSnackBar.show(
-        context,
-        message: "خطأ في الحذف: $failure",
-        type: SnackBarType.error,
-      ),
+          (failure) {
+        CustomSnackBar.show(
+          context,
+          message: "خطأ في الحذف: $failure",
+          type: SnackBarType.error,
+        );
+      },
           (_) {
         CustomSnackBar.show(
           context,
           message: "تم حذف المرفق بنجاح",
           type: SnackBarType.success,
         );
-
-        // Ajouter le filename dans la notification
-        final fileName = att["filename"] ?? "المرفق"; // fallback si filename manquant
 
         _sendNotification(
           title: "تم حذف المرفق بنجاح",
@@ -132,8 +137,9 @@ class _ProjectAttachmentsState extends State<ProjectAttachments> {
         _loadProjectAttachments();
       },
     );
-  }
 
+    isDeleting = false; // 🔓 فك القفل
+  }
 
   /// Envoyer notification
   Future<void> _sendNotification({

@@ -79,6 +79,12 @@ class _AddProjectAttachmentState extends State<AddProjectAttachment> {
             key: "description",
             hint: "وصف المرفق",
             maxLines: 3,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return "يرجى إدخال وصف";
+              }
+              return null;
+            },
             icon: Icon(Icons.description)),
         FormFieldConfig(key: "file", hint: ""),
       ],
