@@ -304,6 +304,26 @@ class _EmployeesPageState extends State<EmployeesPage> {
                                     ],
                                   ),
                                   const SizedBox(height: 5),
+
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.attach_money,
+                                        size: 16,
+                                        color: Colors.green,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        "${employee.dailyWage ?? 0} ريال / يوم",
+                                        style: const TextStyle(
+                                          fontFamily: 'Tajawal',
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 5),
                                   if (employee.latitude != null && employee.longitude != null)
                                     FutureBuilder<String>(
                                       future: getAddressFromLatLng(employee.latitude!, employee.longitude!),
@@ -366,6 +386,12 @@ class _EmployeesPageState extends State<EmployeesPage> {
                                         keyboardType: TextInputType.phone,
                                       ),
                                       generic_modal.FormFieldConfig(
+                                        key: "dailyWage",
+                                        hint: "الأجر اليومي",
+                                        icon: const Icon(Icons.attach_money, color: Colors.green),
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                      generic_modal.FormFieldConfig(
                                         key: "profession",
                                         hint: "المهنة",
                                         icon: const Icon(Icons.category, color: Colors.grey),
@@ -384,6 +410,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
                                     controllers["email"]!.text = employee.email ?? "";
                                     controllers["phone"]!.text = employee.phone ?? "";
                                     controllers["profession"]!.text = employee.profession ?? "";
+                                    controllers["dailyWage"]!.text = employee.dailyWage?.toString() ?? "";
                                     String locationText = "";
 
                                     if (employee.latitude != null && employee.longitude != null) {
@@ -416,6 +443,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
                                               profession: values["profession"],
                                               latitude: selectedLat,
                                               longitude: selectedLng,
+                                              dailyWage: double.tryParse(values["dailyWage"] ?? "0"),
                                             );
 
                                             final result = await sl<UpdateEmployeeUseCase>().call(
@@ -543,6 +571,7 @@ class _EmployeesPageState extends State<EmployeesPage> {
                         profession: values["profession"],
                         latitude: values["latitude"],
                         longitude: values["longitude"],
+                        dailyWage: values["dailyWage"],
                         projectId: null,
                       ),
                     );

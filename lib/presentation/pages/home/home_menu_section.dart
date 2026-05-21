@@ -102,11 +102,11 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
     List<Map<String, dynamic>> getMenuItems(String role) {
       final allItems = [
         {
-          "icon": Icons.engineering,
-          "color": Colors.red.shade100,
-          "title": "إدارة المهندسين",
-          "page": const EngineersPage(selectedType: "",projectName: "",),
-          "roles": ["admin"]
+          "icon": Icons.access_alarm_outlined,
+          "color": Colors.blueGrey.shade100,
+          "title": "حضور و انصراف",
+          "page": AttendancePage(selectedType: "",projectName: "",),
+          "roles": ["admin", "engineer"],
         },
         {
           "icon": Icons.group,
@@ -195,12 +195,14 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           "page": const ElectronicSignaturePage(selectedType: "",projectName: "",),
           "roles": ["admin","engineer", "customer"],
         },
+
+
         {
-          "icon": Icons.access_alarm_outlined,
-          "color": Colors.blueGrey.shade100,
-          "title": "حضور و انصراف",
-          "page": AttendancePage(selectedType: "",projectName: "",),
-          "roles": ["admin", "engineer"],
+          "icon": Icons.engineering,
+          "color": Colors.red.shade100,
+          "title": "إدارة المهندسين",
+          "page": const EngineersPage(selectedType: "",projectName: "",),
+          "roles": ["admin"]
         },
         {
           "icon": Icons.calendar_month_sharp,

@@ -186,120 +186,130 @@ class AttendancePdfGeneratorAll {
           );
 
         // 🔹 Grouper les employés par 2 pour les afficher côte à côte
-          for (int i = 0; i < employees.length; i += 2) {
-            List<pw.Widget> rowChildren = [];
 
-            for (int j = i; j < i + 2 && j < employees.length; j++) {
+          List<List<String>> tableData = [];
 
-              final employee = employees[j];
-              final attendances = allAttendances[employee.id] ?? [];
+          for (final employee in employees) {
+            final attendances = allAttendances[employee.id] ?? [];
 
-              final now = DateTime.now();
+            final now = DateTime.now();
 
-              final monthlyAttendances = attendances.where((a) =>
-              a.startTime != null &&
-                  a.startTime!.year == now.year &&
-                  a.startTime!.month == now.month
-              ).toList();
+            final monthlyAttendances = attendances.where((a) =>
+            a.startTime != null &&
+                a.startTime!.year == now.year &&
+                a.startTime!.month == now.month).toList();
 
-              final presentDays =
-              monthlyAttendances.where((a) => a.status == 'present').toList();
+            final presentDays =
+            monthlyAttendances.where((a) => a.status == 'present').toList();
 
-              final absentDays =
-              monthlyAttendances.where((a) => a.status == 'absent').toList();
+            final absentDays =
+            monthlyAttendances.where((a) => a.status == 'absent').toList();
 
-              double totalWorkMinutes = 0;
-              double totalWaitingMinutes = 0;
-              double totalOvertimeMinutes = 0;
+            final congeDays =
+            monthlyAttendances.where((a) => a.status == 'conge').toList();
 
-              for (var a in presentDays) {
+            double totalWaitingMinutes = 0;
+            double totalOvertimeMinutes = 0;
 
-                /// 🟢 Total heures de travail
-                if (a.startTime != null && a.endTime != null) {
-                  totalWorkMinutes +=
-                      a.endTime!.difference(a.startTime!).inMinutes;
-                }
+            for (var a in presentDays) {
 
-                /// ⏳ Total heures attente
-                if (a.waitingHours != null) {
-                  totalWaitingMinutes += _parseHourMinute(a.waitingHours!);
-                }
-
-                /// ⏰ Total heures supplémentaires
-                if (a.overtimeHours != null) {
-                  totalOvertimeMinutes += _parseHourMinute(a.overtimeHours!);
-                }
+              /// ⏳ Total attente
+              if (a.waitingHours != null) {
+                totalWaitingMinutes += _parseHourMinute(a.waitingHours!);
               }
 
-              /// 🔥 Conversion correcte en heure + minute
-              final workFormatted = _formatMinutes(totalWorkMinutes);
-              final waitingFormatted = _formatMinutes(totalWaitingMinutes);
-              final overtimeFormatted = _formatMinutes(totalOvertimeMinutes);
-
-              rowChildren.add(
-                pw.Expanded(
-                  child: pw.Container(
-                    padding: const pw.EdgeInsets.all(12),
-                    margin: const pw.EdgeInsets.only(right: 8, bottom: 16),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColor.fromHex('#F8FAFF'),
-                      borderRadius: pw.BorderRadius.circular(16),
-                      border: pw.Border.all(color: PdfColor.fromHex('#DCE6FF')),
-                    ),
-                    child: pw.Align(
-                      alignment: pw.Alignment.topRight,
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        mainAxisSize: pw.MainAxisSize.min,
-                        children: [
-
-                          pw.Text(
-                            "👤 ${employee.firstName ?? "-"}",
-                            style: titleStyle,
-                            textDirection: pw.TextDirection.rtl,
-                          ),
-
-                          pw.SizedBox(height: 6),
-
-                          pw.Text(
-                            "⏳مجموع ساعات الانتظار:$waitingFormatted",
-                            style: arabicStyle,
-                            textDirection: pw.TextDirection.rtl,
-                          ),
-
-                          pw.Text(
-                            "⏰مجموع ساعات العمل الإضافية:$overtimeFormatted",
-                            style: arabicStyle,
-                            textDirection: pw.TextDirection.rtl,
-                          ),
-
-                          pw.Text(
-                            "🟢 عدد أيام الحضور: ${presentDays.length}",
-                            style: arabicStyle,
-                            textDirection: pw.TextDirection.rtl,
-                          ),
-
-                          pw.Text(
-                            "🔴 عدد أيام الغياب: ${absentDays.length}",
-                            style: arabicStyle,
-                            textDirection: pw.TextDirection.rtl,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
+              /// ⏰ Total overtime
+              if (a.overtimeHours != null) {
+                totalOvertimeMinutes += _parseHourMinute(a.overtimeHours!);
+              }
             }
 
-            content.add(
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: rowChildren,
-              ),
-            );
+            final waitingFormatted = _formatMinutes(totalWaitingMinutes);
+            final overtimeFormatted = _formatMinutes(totalOvertimeMinutes);
+            String deductionText = "لا";
+            String deductionReason = "-";
+
+            final deductions = presentDays.where((a) => a.hasDeduction == true).toList();
+
+            if (deductions.isNotEmpty) {
+              deductionText = "نعم";
+
+              deductionReason = deductions
+                  .map((e) => e.deductionReason ?? "-")
+                  .join(" , ");
+            }
+
+            tableData.add([
+              waitingFormatted,
+              overtimeFormatted,
+              presentDays.length.toString(),
+              deductionReason,
+              deductionText,
+              absentDays.length.toString(),
+              congeDays.length.toString(),
+              employee.firstName ?? "-",
+            ]);
           }
 
+          content.add(
+            pw.Directionality(
+              textDirection: pw.TextDirection.rtl,
+              child: pw.Table(
+                border: pw.TableBorder.all(
+                  color: PdfColor.fromHex('#DCE6FF'),
+                  width: 1,
+                ),
+
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(2),
+                  1: const pw.FlexColumnWidth(2),
+                  2: const pw.FlexColumnWidth(1),
+                  3: const pw.FlexColumnWidth(1),
+                  4: const pw.FlexColumnWidth(1),
+                  5: const pw.FlexColumnWidth(1),
+                  6: const pw.FlexColumnWidth(1),
+                  7: const pw.FlexColumnWidth(3),
+                },
+
+                children: [
+
+                  // ================= HEADER =================
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('#022C43'),
+                    ),
+                    children: [
+                      _cellHeader("مجموع ساعات الانتظار", arabicFont, emojiFont),
+                      _cellHeader("مجموع ساعات العمل الإضافية", arabicFont, emojiFont),
+                      _cellHeader("عدد أيام الحضور", arabicFont, emojiFont),
+                      _cellHeader("سبب الخصم", arabicFont, emojiFont),
+                      _cellHeader("خصم من الدوام", arabicFont, emojiFont),
+                      _cellHeader("عدد أيام الغياب", arabicFont, emojiFont),
+                      _cellHeader("عدد أيام الاجازة", arabicFont, emojiFont),
+                      _cellHeader("الموظف", arabicFont, emojiFont),
+                    ],
+                  ),
+
+                  // ================= DATA =================
+                  ...tableData.map((row) {
+                    return pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex('#F8FAFF'),
+                      ),
+                      children: row.map((cell) {
+                        return _cell(
+                          cell,
+                          arabicFont,
+                          emojiFont,
+                        );
+                      }).toList(),
+                    );
+                  }).toList(),
+
+                ],
+              ),
+            ),
+          );
 
           return content;
         },
@@ -308,7 +318,50 @@ class AttendancePdfGeneratorAll {
 
     return pdf.save();
   }
+  static pw.Widget _cellHeader(
+      String text,
+      pw.Font arabicFont,
+      pw.Font emojiFont,
+      ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      alignment: pw.Alignment.center,
+      child: pw.Text(
+        text,
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: arabicFont,
+          fontFallback: [emojiFont],
+          fontSize: 11,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.white,
+        ),
+      ),
+    );
+  }
 
+  static pw.Widget _cell(
+      String text,
+      pw.Font arabicFont,
+      pw.Font emojiFont,
+      ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      alignment: pw.Alignment.center,
+      child: pw.Text(
+        text,
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: arabicFont,
+          fontFallback: [emojiFont],
+          fontSize: 10,
+          color: PdfColor.fromHex('#022C43'),
+        ),
+      ),
+    );
+  }
   /// 🔹 Convertit "5 ساعة و 55 دقيقة" en minutes
   static double _parseHourMinute(String str) {
     int hours = 0;

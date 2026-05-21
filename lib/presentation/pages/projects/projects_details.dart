@@ -17,6 +17,7 @@ import 'package:app_bhb/presentation/pages/projects/project_evaluation_technicia
 import 'package:app_bhb/presentation/pages/projects/project_operational_tests.dart';
 import 'package:app_bhb/presentation/pages/projects/project_request_materials.dart';
 import 'package:app_bhb/presentation/pages/projects/project_stages_section.dart';
+import 'package:app_bhb/presentation/pages/projects/project_statistics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -300,6 +301,10 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
         return ProjectEvaluationEngineer(  project: _project!,ownerId: _ownerId ,);
       case 8:
         return ProjectEvaluationTechnician(  project: _project!,ownerId: _ownerId);
+      case 9:
+        return ProjectStatistics(
+          projectOwnerName: _project!.ownerName ?? "",
+        );
       default:
         return const SizedBox();
     }
@@ -333,6 +338,7 @@ class _ProjectsDetailsPageState extends State<ProjectsDetailsPage> {
       {'icon': Icons.notes, 'label': 'ملاحظات هامة'},
       {'icon': Icons.event_available, 'label': 'تقييم المهندسين'},
       {'icon': Icons.event_busy, 'label': 'تقييم الفنيين'},
+      {'icon': Icons.bar_chart, 'label': 'احصائيات المشروع'},
     ];
 
     return Container(

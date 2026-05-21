@@ -265,6 +265,19 @@ class AttendancePdfGenerator {
                       ),
                     ),
 
+                    pw.SizedBox(width: 8), pw.Expanded(
+                      child: _miniStatCard(
+                        title: "🟢 أيام الاجازة",
+                        value: attendances
+                            .where((a) => a.status == "conge")
+                            .length
+                            .toString(),
+                        colorHex: "#FF8F00", // vert premium
+                        arabicFont: arabicFont,
+                        emojiFont: emojiFont,
+                      ),
+                    ),
+
                     pw.SizedBox(width: 8),
 
                     pw.Expanded(
@@ -639,11 +652,12 @@ class AttendancePdfGenerator {
                       textDirection: pw.TextDirection.rtl,
                     ),
                     pw.SizedBox(height: 6),
-
                     if (a.status != null)
                       pw.Text(
                         a.status == "present"
                             ? "✅ الحالة: حاضر"
+                            : a.status == "conge"
+                            ? "🏖 الحالة: إجازة"
                             : "❌ الحالة: غائب",
                         style: pw.TextStyle(
                           font: arabicFont,
@@ -651,12 +665,14 @@ class AttendancePdfGenerator {
                           fontWeight: pw.FontWeight.bold,
                           color: a.status == "present"
                               ? PdfColor.fromHex('#2E7D32')
+                              : a.status == "conge"
+                              ? PdfColor.fromHex('#EF6C00')
                               : PdfColor.fromHex('#C62828'),
                           fontFallback: [emojiFont],
                         ),
                         textDirection: pw.TextDirection.rtl,
                       ),
-
+                    pw.SizedBox(height: 6),
                   ],
                 ),
               ),

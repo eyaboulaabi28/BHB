@@ -752,10 +752,10 @@ class _AddMeetingModalState extends State<AddMeetingModal> {
                                 List<Map<String, String>> uploadedImagesWithRemarks =
                                 results.whereType<Map<String, String>>().toList();
 
-
                                 // ================= UPLOAD SIGNATURE =================
-                                if (_showSignature && !_signatureController.isEmpty) {
+                                if (!_signatureController.isEmpty) {
                                   final bytes = await _signatureController.toPngBytes();
+
                                   if (bytes != null) {
                                     signatureUrl = await _uploadSignatureToFirebase(bytes);
                                   }

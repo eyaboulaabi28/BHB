@@ -8,6 +8,7 @@ class Employees {
   String? projectId;
   double? latitude;
   double? longitude;
+  double? dailyWage;
 
 
 
@@ -21,6 +22,7 @@ class Employees {
     this.role = "employee",
     this.latitude,
     this.longitude,
+    this.dailyWage,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,6 +35,7 @@ class Employees {
       'projectId':projectId,
       'latitude': latitude,
       'longitude': longitude,
+      'dailyWage': dailyWage,
     };
   }
 
@@ -47,8 +50,7 @@ class Employees {
       projectId:map['projectId'],
       latitude: map['latitude']?.toDouble(),
       longitude: map['longitude']?.toDouble(),
-
-
+      dailyWage: (map['dailyWage'] as num?)?.toDouble(),
     );
   }
 }

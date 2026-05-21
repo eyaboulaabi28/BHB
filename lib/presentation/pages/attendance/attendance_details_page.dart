@@ -37,6 +37,13 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Début du mois actuel
+    startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
+
+    // ✅ Fin du mois actuel
+    endDate = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
+
     _loadAttendancesByDateRange();
   }
   Future<void> _loadAttendancesByDateRange() async {
@@ -373,13 +380,24 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                       Row(
                                         children: [
                                           Icon(
-                                            a.status == 'present' ? Icons.check_circle : Icons.cancel,
-                                            size: 20,
-                                            color: a.status == 'present' ? Colors.green : Colors.red,
+                                            a.status == 'present'
+                                                ? Icons.check_circle
+                                                : a.status == 'conge'
+                                                ? Icons.beach_access
+                                                : Icons.cancel,
+                                            color: a.status == 'present'
+                                                ? Colors.green
+                                                : a.status == 'conge'
+                                                ? Colors.orange
+                                                : Colors.red,
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
-                                            a.status == 'present' ? "حاضر" : "غائب",
+                                            a.status == 'present'
+                                                ? "حاضر"
+                                                : a.status == 'conge'
+                                                ? "إجازة"
+                                                : "غائب",
                                             style: const TextStyle(
                                               fontFamily: 'Tajawal',
                                               fontSize: 14,
@@ -387,8 +405,6 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                           ),
                                         ],
                                       ),
-
-
                                   ],
                                 ),
 

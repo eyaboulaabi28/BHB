@@ -571,9 +571,8 @@ class _MeetingPageState extends State<MeetingPage> {
                 ],
 
                 // SIGNATURE CLIENT
-                if (meeting.signatureUrl != null &&
-                    meeting.signatureUrl!.isNotEmpty &&
-                    meeting.type == "مع العميل") ...[
+                if (meeting.signatureUrl != null
+                    ) ...[
                   const Text(
                     "✍️ توقيع ",
                     textAlign: TextAlign.center,

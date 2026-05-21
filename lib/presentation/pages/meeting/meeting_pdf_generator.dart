@@ -249,13 +249,13 @@ class MeetingPdfGenerator {
                     pw.ClipRRect(
                       horizontalRadius: 12,
                       verticalRadius: 12,
-                      child: pw.Image(
-                        img,
-                        height: 300,
-                        width: 300,
-                        //width: PdfPageFormat.a4.availableWidth,
-                        fit: pw.BoxFit.cover,
-                      ),
+                      child:
+                      pw.Container(
+                        constraints: const pw.BoxConstraints(
+                          maxHeight: 250,
+                        ),
+                        child: pw.Image(img, fit: pw.BoxFit.contain),
+                      )
                     ),
                     if (remark.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
@@ -285,7 +285,7 @@ class MeetingPdfGenerator {
 
 
           // 🔸 Signature
-          if (signatureImage != null && meeting.type == "مع العميل") ...[
+          if (signatureImage != null ) ...[
             pw.SizedBox(height: 26),
             pw.Text(
               "توقيع ",

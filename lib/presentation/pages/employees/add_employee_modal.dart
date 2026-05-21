@@ -66,6 +66,12 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
         keyboardType: TextInputType.phone,
       ),
       FormFieldConfig(
+        key: "dailyWage",
+        hint: "الأجر اليومي",
+        icon: const Icon(Icons.attach_money, color: Colors.green),
+        keyboardType: TextInputType.number,
+      ),
+      FormFieldConfig(
         key: "profession",
         hint: "مهنة الموظف",
         icon: const Icon(Icons.category, color: Colors.grey),
@@ -185,6 +191,7 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
             projectId: widget.projectId,
             latitude: selectedLat,
             longitude: selectedLng,
+            dailyWage: double.tryParse(values["dailyWage"] ?? "0"),
           );
 
           final addEmployeeUseCase = sl<AddEmployeeUseCase>();
@@ -220,6 +227,7 @@ class _AddEmployeeModalState extends State<AddEmployeeModal> {
                 "profession": values["profession"].trim(),
                 "latitude": selectedLat,
                 "longitude": selectedLng,
+                "dailyWage": double.tryParse(values["dailyWage"] ?? "0"),
               });
 
               Navigator.pop(context);

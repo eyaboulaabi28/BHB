@@ -59,7 +59,7 @@ class AddAttendanceModal extends StatefulWidget {
 }
 
 class _AddAttendanceModalState extends State<AddAttendanceModal> {
-
+  bool? isWorkingFriday;
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
   bool _isSubmitting = false;
@@ -72,6 +72,8 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
   String? signatureUrl;
   String? hoursErrorMessage;
   bool get isAdmin => widget.userRole == "admin";
+  bool? hasDeduction;
+  final TextEditingController deductionReasonController = TextEditingController();
 
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
@@ -86,7 +88,8 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
     _loadAttendanceTime();
     _controllers = {
       "employeeName": TextEditingController(text: widget.initialEmployeeName ?? ""),
-      "date": TextEditingController(text: _formatDate(DateTime.now())),
+       "date": TextEditingController(text: _formatDate(DateTime.now())),
+     // "date": TextEditingController(text: "2026-05-08"),
       "startTime": TextEditingController(),
       "endTime": TextEditingController(),
       "waitingHours": TextEditingController(),
@@ -95,9 +98,6 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
       "notes": TextEditingController(),
     };
   }
-
-
-
   Future<void> _loadAttendanceTime() async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -232,6 +232,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
   @override
   void dispose() {
     _hoursTimer?.cancel();
+    deductionReasonController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
     }
@@ -324,6 +325,42 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                 final customer = customers.firstWhere((c) => c.firstName == value, orElse: () => Customers(id: "", firstName: ""));
                 selectedCustomerId = (customer.id ?? "").isEmpty ? null : customer.id;
               },
+            ),
+            const SizedBox(height: 15),
+            const Text(
+              "هل الموظف يعمل يوم الجمعة؟",
+              style: TextStyle(
+                fontFamily: 'Tajawal',
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 5),
+
+            Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<bool>(
+                    title: const Text("نعم"),
+                    value: true,
+                    groupValue: isWorkingFriday,
+                    onChanged: (value) {
+                      setState(() => isWorkingFriday = value);
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: RadioListTile<bool>(
+                    title: const Text("لا"),
+                    value: false,
+                    groupValue: isWorkingFriday,
+                    onChanged: (value) {
+                      setState(() => isWorkingFriday = value);
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -504,6 +541,70 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                     right: const Icon(Icons.access_time_filled),
                     readOnly: true,
                   ),
+                const SizedBox(height: 20),
+
+                const Text(
+                  "هل يوجد خصم من الدوام؟",
+                  style: TextStyle(
+                    fontFamily: 'Tajawal',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<bool>(
+                        title: const Text("نعم"),
+                        value: true,
+                        groupValue: hasDeduction,
+                        onChanged: (value) {
+                          setState(() {
+                            hasDeduction = value;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<bool>(
+                        title: const Text("لا"),
+                        value: false,
+                        groupValue: hasDeduction,
+                        onChanged: (value) {
+                          setState(() {
+                            hasDeduction = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (hasDeduction == true) ...[
+                  const SizedBox(height: 10),
+
+                  const Text(
+                    "سبب الخصم",
+                    style: TextStyle(
+                      fontFamily: 'Tajawal',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  NewRoundTextField(
+                    hintText: "أدخل سبب الخصم",
+                    controller: deductionReasonController,
+                    right: const Icon(Icons.edit_note),
+                  ),
+                ],
               ],
             );
           },
@@ -635,14 +736,39 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             _calculateDiffFromStartToEndDecimal().replaceAll(',', '.'),
                           ) ??
                               0.0;
+                          final selectedDate = DateTime.tryParse(_controllers["date"]!.text);
+                          final isFriday = selectedDate?.weekday == DateTime.friday;
 
-                          final waitingHours = selectedHoursType == "waiting"
-                              ? _controllers["waitingHours"]!.text.trim()
-                              : null;
+                          String? waitingHours;
+                          String? overtimeHours;
+                          String status = "present";
+                          String? notes = _controllers["notes"]?.text.trim();
 
-                          final overtimeHours = selectedHoursType == "overtime"
-                              ? _controllers["overtimeHours"]!.text.trim()
-                              : null;
+                          if (isFriday == true) {
+                            if (isWorkingFriday == true) {
+                              // ✅ Travaille vendredi → overtime
+                              overtimeHours = _calculateDiffFromStartToEndDecimal();
+                              waitingHours = null;
+
+                              notes = (notes ?? "") + " | عمل يوم الجمعة (ساعات إضافية)";
+                            } else {
+                              // ❌ Congé vendredi
+                              overtimeHours = null;
+                              waitingHours = null;
+                              status = "conge";
+
+                              notes = "يوم الاجازة الجمعة";
+                            }
+                          } else {
+                            // 🔹 comportement normal
+                            waitingHours = selectedHoursType == "waiting"
+                                ? _controllers["waitingHours"]!.text.trim()
+                                : null;
+
+                            overtimeHours = selectedHoursType == "overtime"
+                                ? _controllers["overtimeHours"]!.text.trim()
+                                : null;
+                          }
 
                           // 🔹 Créer l'objet Attendance
                           final attendance = Attendance(
@@ -656,8 +782,13 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             overtimeHours: overtimeHours,
                             customerName: customerCtrl.text.trim(),
                             signatureUrl: signatureUrl,
-                            notes: _controllers["notes"]?.text.trim(),
-                            status: "present",
+                            notes: notes,
+                            status: status,
+                            hasDeduction: hasDeduction,
+                            deductionReason: deductionReasonController.text.trim().isEmpty
+                                ? null
+                                : deductionReasonController.text.trim(),
+
                           );
 
                           // 🔹 Ajouter dans Firebase

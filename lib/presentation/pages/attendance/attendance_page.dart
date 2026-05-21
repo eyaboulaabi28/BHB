@@ -11,6 +11,7 @@ import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
 import 'package:app_bhb/presentation/pages/attendance/AttendancePdfGeneratorAll.dart';
 import 'package:app_bhb/presentation/pages/attendance/add_attendance_modal.dart';
 import 'package:app_bhb/presentation/pages/attendance/attendance_details_page.dart';
+import 'package:app_bhb/presentation/pages/attendance/show_attendance_details.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../../service_locator.dart';
@@ -218,6 +219,30 @@ class _AttendancePageState extends State<AttendancePage> {
             const SizedBox(height: 15),
             // Bouton PDF complet avec texte et icône
             ElevatedButton.icon(
+              icon: const Icon(Icons.verified_user),
+              label: const Text("تثبيت كامل خاص بإدارة سجل حضور الموظفين"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () {
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShowAttendanceDetails(
+                      employees: employees,
+                      allAttendances: {},
+                    ),
+                  ),
+                );
+
+              },
+            ),
+            const SizedBox(height: 10), ElevatedButton.icon(
               icon: const Icon(Icons.picture_as_pdf),
               label: const Text("تقرير مفصل حول سجل حضور الموظفين"),
               style: ElevatedButton.styleFrom(

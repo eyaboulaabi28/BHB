@@ -7,8 +7,6 @@ abstract class AttendanceRepository {
   Future<Either> getAttendanceById(String id);
   Future<Either> getAttendanceByEmployeeAndDateRange(
       String employeeId, DateTime start, DateTime end);
-
   Future<bool> isEmployeePresentToday(String employeeId, {DateTime? date});
-
 
 }
