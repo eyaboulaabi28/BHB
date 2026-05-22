@@ -8,8 +8,6 @@ import 'package:app_bhb/data/auth/models/tasks_model.dart';
 class SubStagesSectionBuilder {
   final List<SubStage> subStages;
   final List<Tasks> tasks;
-  final Map<String, List<Uint8List>> imagesBeforeMap;
-  final Map<String, List<Uint8List>> imagesAfterMap;
   final pw.Font arabicFont;
   final pw.Font emojiFont;
   final Map<String, String> imageDownloadUrlMap;
@@ -19,8 +17,6 @@ class SubStagesSectionBuilder {
   SubStagesSectionBuilder({
     required this.subStages,
     required this.tasks,
-    required this.imagesBeforeMap,
-    required this.imagesAfterMap,
     required this.arabicFont,
     required this.emojiFont,
     required this.imageDownloadUrlMap,
@@ -94,10 +90,9 @@ class SubStagesSectionBuilder {
         .toList();
   }
 
-  String _buildWebGalleryUrl(String subStageId) {
-    return "https://bhbgroup-ed1bc.web.app/substage.html?subStageId=$subStageId&projectId=$projectId";
+  String _buildTaskGalleryUrl(String taskId) {
+    return "https://bhbgroup-ed1bc.web.app/task?taskId=$taskId&projectId=$projectId";
   }
-
 
   pw.Widget build() {
     if (subStages.isEmpty) return pw.SizedBox();
@@ -177,73 +172,24 @@ class SubStagesSectionBuilder {
               : _buildTasksGroupedByFloor(subTasks),
 
           // ================= 🔗 LINK =================
-          ...[
-            pw.SizedBox(height:2),
-            // 🔵 Lien cliquable (Web / Drive / PC)
-            pw.Align(
-              alignment: pw.Alignment.center,
-              child: pw.UrlLink(
-                destination: _buildWebGalleryUrl(subStage.id!),
-                child: pw.Text(
-                  "عرض المزيد من الصور",
-                  style: pw.TextStyle(
-                    font: arabicFont,
-                    fontSize: 8,
-                    color: PdfColors.blue,
-                    decoration: pw.TextDecoration.underline,
-                  ),
-                  textDirection: pw.TextDirection.rtl,
-                ),
-              ),
-            ),
-            pw.SizedBox(height: 1),
-            pw.Text(
-              "إذا لم يعمل الرابط من واتساب، انسخ الرابط التالي وافتحه في المتصفح:",
-              style: pw.TextStyle(
-                font: arabicFont,
-                fontSize: 7,
-                color: PdfColors.grey700,
-              ),
-              textDirection: pw.TextDirection.rtl,
-              textAlign: pw.TextAlign.center,
-            ),
-            // 🟢 URL AFFICHÉE EN CLAIR (COPIABLE)
-            pw.Container(
-              padding: const pw.EdgeInsets.all(4),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey200,
-                borderRadius: pw.BorderRadius.circular(4),
-                border: pw.Border.all(color: PdfColors.grey400),
-              ),
-              child: pw.Text(
-                "https://bhbgroup-ed1bc.web.app/substage.html?subStageId=${subStage.id}&projectId=$projectId",
-                style: pw.TextStyle(
-                  fontSize: 6,
-                  color: PdfColors.black,
-                ),
-                textAlign: pw.TextAlign.center,
-              ),
-            ),
-          ]
 
         ],
       ),
     );
   }
   pw.Widget _buildTasksGroupedByFloor(List<Tasks> subTasks) {
-
     // ✅ CAS 1 : phases SANS étages → UNE SEULE task
     if (!phasesWithFloorLabels.contains(stageId)) {
-      final firstTask = subTasks.first;
+      int index = 0;
 
       return pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          _buildTaskBox(firstTask, 1),
-        ],
+        children: subTasks.map((task) {
+          index++;
+          return _buildTaskBox(task, index);
+        }).toList(),
       );
     }
-
     // ✅ CAS 2 : phase_08 / phase_09 / phase_10 → TOUTES les tasks
     final grouped = _groupTasksByFloor(subTasks);
 
@@ -290,136 +236,38 @@ class SubStagesSectionBuilder {
     );
   }
   pw.Widget _buildTaskBox(Tasks task, int taskNumber) {
-    final beforeImages = (imagesBeforeMap[task.id ?? ''] ?? []).take(1).toList();
-    final afterImages = (imagesAfterMap[task.id ?? ''] ?? []).take(1).toList();
-    String firebaseInlineImageUrl(String originalUrl) {
-      final uri = Uri.parse(originalUrl);
-      final params = Map<String, String>.from(uri.queryParameters);
 
-      // ✅ FORCER le téléchargement du fichier
-      params['alt'] = 'media';
+    final allUrls = <String>[
+      ...?task.imagesBefore,
+      ...?task.imagesAfter,
+    ]
+        .map((u) => imageDownloadUrlMap[u])
+        .whereType<String>()
+        .toList();
 
-      // ✅ affichage inline (pas download forcé)
-      params['response-content-disposition'] = 'inline';
-
-      return uri.replace(queryParameters: params).toString();
-    }
-    pw.Widget _buildBeforeAfterImages({
-      required List<List<int>> beforeImages,
-      required List<List<int>> afterImages,
-      List<String>? beforeUrls,
-      List<String>? afterUrls,
-    }) {
-      pw.Widget buildImage(List<int> bytes, String? url) {
-        final safeUrl = url != null ? imageDownloadUrlMap[url.trim()] : null;
-        final inlineUrl =
-        safeUrl != null ? firebaseInlineImageUrl(safeUrl) : null;
-        final googleUrl = inlineUrl != null
-            ? 'https://www.google.com/url?q=${Uri.encodeComponent(inlineUrl)}'
-            : null;
-        final imageWidget = pw.Image(
-          pw.MemoryImage(Uint8List.fromList(bytes)),
-          width: 50,
-          height: 50,
-          fit: pw.BoxFit.cover,
-        );
-
-        return pw.Column(
-          mainAxisSize: pw.MainAxisSize.min,
-          children: [
-            googleUrl != null
-                ? pw.UrlLink(destination: googleUrl, child: imageWidget)
-                : imageWidget,
-            if (inlineUrl != null) ...[
-              pw.SizedBox(height: 2),
-             /* pw.UrlLink(
-                destination: inlineUrl,
-                child: pw.Text(
-                  'عرض',
-                  style: pw.TextStyle(
-                    font: arabicFont,
-                    fontSize: 7,
-                    color: PdfColors.blue,
-                    decoration: pw.TextDecoration.underline,
-                  ),
-                  textDirection: pw.TextDirection.rtl,
-                ),
-              ),*/
-
-            ]
-          ],
-        );
-      }
-
-      return pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          pw.Text(
-            "📸 الصور:",
-            style: pw.TextStyle(
-              font: arabicFont,
-              fontFallback: [emojiFont],
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blue800,
-            ),
-            textDirection: pw.TextDirection.rtl,
-          ),
-          pw.SizedBox(height: 1),
-          pw.Wrap(
-            alignment: pw.WrapAlignment.end,
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              // 🔵 BEFORE
-              ...beforeImages.asMap().entries.map((e) {
-                final url = (beforeUrls != null && e.key < beforeUrls.length)
-                    ? beforeUrls[e.key]
-                    : null;
-                return pw.Column(
-                  children: [
-                    buildImage(e.value, url),
-                  ],
-                );
-              }),
-
-              // 🟢 AFTER
-              ...afterImages.asMap().entries.map((e) {
-                final url = (afterUrls != null && e.key < afterUrls.length)
-                    ? afterUrls[e.key]
-                    : null;
-                return pw.Column(
-                  children: [
-                    buildImage(e.value, url),
-                  ],
-                );
-              }),
-            ],
-          ),
-        ],
-      );
-    }
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 4),
       padding: const pw.EdgeInsets.all(4),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-        border: pw.Border.all(color: PdfColors.grey300, width: 0.15),
+        borderRadius: const pw.BorderRadius.all(
+          pw.Radius.circular(2),
+        ),
+        border: pw.Border.all(
+          color: PdfColors.grey300,
+          width: 0.15,
+        ),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          pw.SizedBox(height: 3),
 
-          // 📝 Notes (titre + contenu sur la même ligne)
-            // 📝 Notes (titre + contenu sur la même ligne)
           if (task.notes != null && task.notes!.isNotEmpty) ...[
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
-                // النص
+
                 pw.Expanded(
                   child: pw.Text(
                     task.notes!,
@@ -430,10 +278,9 @@ class SubStagesSectionBuilder {
                       color: PdfColors.grey700,
                     ),
                     textDirection: pw.TextDirection.rtl,
-                    softWrap: true,
                   ),
                 ),
-                // 📝 العنوان
+
                 pw.Text(
                   "📝 الملاحظات: ",
                   style: pw.TextStyle(
@@ -445,23 +292,80 @@ class SubStagesSectionBuilder {
                   ),
                   textDirection: pw.TextDirection.rtl,
                 ),
-
-
               ],
             ),
-            pw.SizedBox(height:1),
+            pw.SizedBox(height: 3),
           ],
-          if (beforeImages.isNotEmpty || afterImages.isNotEmpty)
-            _buildBeforeAfterImages(
-              beforeImages: beforeImages,
-              afterImages: afterImages,
-              beforeUrls: task.imagesBefore,
-              afterUrls: task.imagesAfter,
+
+          // ================= ALL IMAGES =================
+          if (allUrls.isNotEmpty) ...[
+
+            // ===== TITLE =====
+            pw.Text(
+              "📸 جميع صور المهمة :",
+              style: pw.TextStyle(
+                font: arabicFont,
+                fontFallback: [emojiFont],
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue800,
+              ),
+              textDirection: pw.TextDirection.rtl,
             ),
 
-        ],
+            pw.SizedBox(height: 4),
+
+            // ===== BOX LINK =====
+            pw.UrlLink(
+              destination: _buildTaskGalleryUrl(task.id ?? ""),
+              child: pw.Container(
+                padding: const pw.EdgeInsets.symmetric(
+                  vertical: 6,
+                  horizontal: 8,
+                ),
+
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#EAF4FF'),
+
+                  borderRadius: pw.BorderRadius.circular(6),
+
+                  border: pw.Border.all(
+                    color: PdfColor.fromHex('#0E4D92'),
+                    width: 0.6,
+                  ),
+                ),
+
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+
+                    pw.Text(
+                      "🔗",
+                      style: pw.TextStyle(
+                        fontFallback: [emojiFont],
+                        fontSize: 10,
+                      ),
+                    ),
+
+                    pw.SizedBox(width: 4),
+
+                    pw.Text(
+                      "عرض المزيد من الصور",
+                      style: pw.TextStyle(
+                        font: arabicFont,
+                        fontFallback: [emojiFont],
+                        fontSize: 8,
+                        color: PdfColors.blue900,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                      textDirection: pw.TextDirection.rtl,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],        ],
       ),
     );
   }
-
 }

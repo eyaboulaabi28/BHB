@@ -16,46 +16,35 @@ class ProjectStatistics extends StatefulWidget {
 }
 
 class _ProjectStatisticsState extends State<ProjectStatistics> {
-
   List<Attendance> attendances = [];
-  bool isLoading = true;
   List<Employees> employees = [];
+
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    _loadProjectAttendances();
-    _loadEmployees();
+    _loadData();
   }
-  Future<void> _loadEmployees() async {
 
+  /// 🔹 تحميل البيانات
+  Future<void> _loadData() async {
     try {
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('employees')
+      /// 🔹 الموظفين
+      final employeesSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('role', isEqualTo: 'employee')
           .get();
 
-      final data = snapshot.docs.map((doc) {
-
+      final employeesData = employeesSnapshot.docs.map((doc) {
         return Employees.fromMap(
           doc.id,
           doc.data(),
         );
-
       }).toList();
 
-      setState(() {
-        employees = data;
-      });
-
-    } catch (e) {
-
-      debugPrint("Error employees: $e");
-    }
-  }
-  Future<void> _loadProjectAttendances() async {
-    try {
-
-      final snapshot = await FirebaseFirestore.instance
+      /// 🔹 الحضور
+      final attendanceSnapshot = await FirebaseFirestore.instance
           .collection('attendance')
           .where(
         'customerName',
@@ -63,18 +52,36 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
       )
           .get();
 
-      final data = snapshot.docs.map((doc) {
-        return Attendance.fromMap(doc.id, doc.data());
+      final attendanceData = attendanceSnapshot.docs.map((doc) {
+        return Attendance.fromMap(
+          doc.id,
+          doc.data(),
+        );
       }).toList();
 
       setState(() {
-        attendances = data;
+        employees = employeesData;
+        attendances = attendanceData;
         isLoading = false;
       });
 
-    } catch (e) {
+      debugPrint("========== EMPLOYEES ==========");
 
-      debugPrint("Error statistics: $e");
+      for (var emp in employees) {
+        debugPrint(
+          "ID: ${emp.id} | Name: ${emp.firstName} | Wage: ${emp.dailyWage}",
+        );
+      }
+
+      debugPrint("========== ATTENDANCES ==========");
+
+      for (var att in attendances) {
+        debugPrint(
+          "EmployeeId: ${att.employeeId} | EmployeeName: ${att.employeeName}",
+        );
+      }
+    } catch (e) {
+      debugPrint("ERROR: $e");
 
       setState(() {
         isLoading = false;
@@ -82,33 +89,29 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
     }
   }
 
-  /// 🔹 الموظفين بدون تكرار
+  /// 🔹 أسماء الموظفين بدون تكرار
   List<String> get uniqueEmployees {
-
-    final names = attendances
+    return attendances
         .map((e) => e.employeeName ?? "")
         .where((e) => e.isNotEmpty)
         .toSet()
         .toList();
-
-    return names;
   }
 
   /// 🔹 تحويل النص إلى double
   double parseHours(String? value) {
-
     if (value == null || value.isEmpty) {
       return 0;
     }
 
     try {
-
-      final regex = RegExp(r'(\d+)\s*ساعة\s*و\s*(\d+)\s*دقيقة');
+      final regex = RegExp(
+        r'(\d+)\s*ساعة\s*و\s*(\d+)\s*دقيقة',
+      );
 
       final match = regex.firstMatch(value);
 
       if (match != null) {
-
         final hours = int.parse(match.group(1)!);
 
         final minutes = int.parse(match.group(2)!);
@@ -120,16 +123,13 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
         value.replaceAll(',', '.'),
       ) ??
           0;
-
     } catch (_) {
-
       return 0;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-
     if (isLoading) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -154,7 +154,6 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-
           border: TableBorder.all(
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(12),
@@ -172,7 +171,6 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
           horizontalMargin: 16,
 
           columns: const [
-
             DataColumn(
               label: Text(
                 "الموظف",
@@ -193,25 +191,6 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
               ),
             ),
 
-            DataColumn(
-              label: Text(
-                "الغيابات",
-                style: TextStyle(
-                  fontFamily: 'Tajawal',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            DataColumn(
-              label: Text(
-                "الإجازات",
-                style: TextStyle(
-                  fontFamily: 'Tajawal',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
 
             DataColumn(
               label: Text(
@@ -226,51 +205,72 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
 
           rows: uniqueEmployees.map((employeeName) {
 
-            final employeeData = employees.firstWhere(
-
-                  (e) =>
-              (e.firstName ?? "").trim().toLowerCase() ==
-                  employeeName.trim().toLowerCase(),
-
-              orElse: () => Employees(
-                dailyWage: 0,
-              ),
-            );
-
+            /// 🔹 سجلات الموظف
             final employeeAttendances = attendances.where(
                   (e) => e.employeeName == employeeName,
             ).toList();
 
-            final totalDays = employeeAttendances.length;
+            /// 🔹 employeeId
+            final employeeId = employeeAttendances.isNotEmpty
+                ? employeeAttendances.first.employeeId
+                : null;
 
+            Employees? employeeData;
+
+            try {
+
+              /// 🔹 البحث بالـ ID
+              employeeData = employees.firstWhere(
+                    (e) => e.id == employeeId,
+              );
+
+            } catch (_) {
+
+              try {
+
+                /// 🔹 fallback بالاسم
+                employeeData = employees.firstWhere(
+                      (e) =>
+                      (e.firstName ?? "")
+                          .trim()
+                          .toLowerCase()
+                          .contains(
+                        employeeName.trim().toLowerCase(),
+                      ),
+                );
+
+              } catch (_) {
+
+                employeeData = Employees(
+                  dailyWage: 0,
+                );
+              }
+            }
+
+            debugPrint("========== MATCH ==========");
+            debugPrint("Employee Name: $employeeName");
+            debugPrint("Employee ID: $employeeId");
+            debugPrint("Found Wage: ${employeeData.dailyWage}");
+
+            /// 🔹 أيام الحضور فقط
+            final totalDays = employeeAttendances.where(
+                  (e) => e.status == "present",
+            ).length;
+
+            /// 🔹 الغيابات
             final absences = employeeAttendances.where(
                   (e) => e.status == "absent",
             ).length;
 
+            /// 🔹 الإجازات
             final vacations = employeeAttendances.where(
                   (e) => e.status == "conge",
             ).length;
 
-            final overtimeHours = employeeAttendances.fold<double>(
-              0,
-                  (sum, item) {
-                return sum + parseHours(item.overtimeHours);
-              },
-            );
-
-            final waitingHours = employeeAttendances.fold<double>(
-              0,
-                  (sum, item) {
-                return sum + parseHours(item.waitingHours);
-              },
-            );
-
-            final deductions = employeeAttendances.where(
-                  (e) => e.hasDeduction == true,
-            ).length;
+            /// 🔹 الأجر اليومي
             final dailyWage = employeeData.dailyWage ?? 0;
-            debugPrint("Employee: $employeeName");
-            debugPrint("Found wage: ${employeeData.dailyWage}");
+
+            /// 🔹 التكلفة
             final totalCost = totalDays * dailyWage;
 
             return DataRow(
@@ -330,55 +330,9 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
                   ),
                 ),
 
-                /// 🔹 الغياب
-                DataCell(
-                  Row(
-                    children: [
-
-                      const Icon(
-                        Icons.cancel,
-                        color: Colors.red,
-                        size: 18,
-                      ),
-
-                      const SizedBox(width: 5),
-
-                      Text(
-                        "$absences",
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                /// 🔹 الإجازات
-                DataCell(
-                  Row(
-                    children: [
-
-                      const Icon(
-                        Icons.event_busy,
-                        color: Colors.orange,
-                        size: 18,
-                      ),
-
-                      const SizedBox(width: 5),
-
-                      Text(
-                        "$vacations",
-                        style: const TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
 
+                /// 🔹 التكلفة
                 DataCell(
                   Row(
                     children: [
@@ -401,10 +355,8 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
                     ],
                   ),
                 ),
-
               ],
             );
-
           }).toList(),
         ),
       ),

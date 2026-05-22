@@ -2,7 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
-    <title>صور المرحلة الفرعية</title>
+    <title>صور المهمة</title>
+
     <style>
         body {
           font-family: Arial, Tahoma;
@@ -18,7 +19,7 @@
 
         .grid {
           display: flex;
-          flex-direction: column; /* صورة في كل سطر */
+          flex-direction: column;
           gap: 16px;
           max-width: 600px;
           margin: auto;
@@ -44,19 +45,34 @@
           border-radius: 6px;
           border: 1px solid #ccc;
         }
+
+        .error {
+          color: red;
+          text-align: center;
+          font-size: 18px;
+        }
     </style>
 </head>
 
 <body>
 
-<h2>📸 صور المرحلة الفرعية</h2>
+<h2>📸 صور المهمة</h2>
+
 <div class="grid" id="images"></div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ⚡ Firebase config
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ================= FIREBASE CONFIG =================
+
     const firebaseConfig = {
       apiKey: "AIzaSyCcp7l5I4ftPHAp6F6CMPR3pzRbNVx9dRw",
       authDomain: "bhbgroup-ed1bc.firebaseapp.com",
@@ -69,57 +85,103 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // ⚡ Récupérer subStageId et projectId depuis l'URL
+    // ================= GET URL PARAMS =================
+
     const params = new URLSearchParams(window.location.search);
-    const subStageId = params.get("subStageId");
+
+    const taskId = params.get("taskId");
     const projectId = params.get("projectId");
 
-    if (!subStageId || !projectId) {
-      document.body.innerHTML += "<p style='color:red;text-align:center'>❌ subStageId ou projectId manquant</p>";
-      throw new Error("subStageId ou projectId manquant");
-    }
-
-    // ⚡ Requête Firestore : filtrer par subStageId ET projectId
-    const q = query(
-      collection(db, "tasks"),
-      where("subStageId", "==", subStageId),
-      where("projectId", "==", projectId)
-    );
-
-    const snapshot = await getDocs(q);
     const container = document.getElementById("images");
 
-    if (snapshot.empty) {
-      container.innerHTML = "<p style='text-align:center'>لا توجد صور</p>";
+    // ================= VALIDATION =================
+
+    if (!taskId || !projectId) {
+
+      container.innerHTML = `
+        <p class="error">
+          ❌ taskId أو projectId مفقود
+        </p>
+      `;
+
+      throw new Error("taskId أو projectId مفقود");
     }
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      // Combiner imagesBefore et imagesAfter
-      const allImages = [
-        ...(data.imagesBefore || []),
-        ...(data.imagesAfter || [])
-      ];
-      let index = 1;
-      allImages.forEach(url => {
-        if (!url) return;
 
-        const card = document.createElement("div");
-        card.className = "photo-card";
+    // ================= GET TASK =================
 
-        const title = document.createElement("div");
-        title.className = "photo-title";
-        title.textContent = `الصورة رقم ${index}`;
+    try {
 
-        const img = document.createElement("img");
-        img.src = url;
-        img.loading = "lazy";
-        card.appendChild(title);
-        card.appendChild(img);
-        container.appendChild(card);
+      const taskRef = doc(db, "tasks", taskId);
 
-        index++;
-      });
-    });
+      const snapshot = await getDoc(taskRef);
+
+      if (!snapshot.exists()) {
+
+        container.innerHTML = `
+          <p class="error">
+            لا توجد صور لهذه المهمة
+          </p>
+        `;
+
+      } else {
+
+        const data = snapshot.data();
+
+        // ================= ALL IMAGES =================
+
+        const allImages = [
+          ...(data.imagesBefore || []),
+          ...(data.imagesAfter || [])
+        ];
+
+        if (allImages.length === 0) {
+
+          container.innerHTML = `
+            <p style="text-align:center">
+              لا توجد صور
+            </p>
+          `;
+
+        } else {
+
+          let index = 1;
+
+          allImages.forEach(url => {
+
+            if (!url) return;
+
+            const card = document.createElement("div");
+            card.className = "photo-card";
+
+            const title = document.createElement("div");
+            title.className = "photo-title";
+            title.textContent = `الصورة رقم ${index}`;
+
+            const img = document.createElement("img");
+            img.src = url;
+            img.loading = "lazy";
+
+            card.appendChild(title);
+            card.appendChild(img);
+
+            container.appendChild(card);
+
+            index++;
+          });
+        }
+      }
+
+    } catch (e) {
+
+      console.error(e);
+
+      container.innerHTML = `
+        <p class="error">
+          ❌ حدث خطأ أثناء تحميل الصور
+        </p>
+      `;
+    }
+
 </script>
 
 </body>

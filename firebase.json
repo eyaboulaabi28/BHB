@@ -29,11 +29,18 @@
     ],
     "rewrites": [
       {
+        "source": "/task",
+        "destination": "/task.html"
+      },
+      {
+        "source": "/substage",
+        "destination": "/substage.html"
+      },
+      {
         "source": "/test",
         "destination": "/test.html"
       }
-    ]
-  }
+    ]  }
 }
 
 

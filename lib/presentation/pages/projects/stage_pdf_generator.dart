@@ -36,7 +36,7 @@ class StagePdfGenerator {
     required this.projectId,
 
   });
-  final Map<String, Uint8List> _imageMemoryCache = {};
+  //final Map<String, Uint8List> _imageMemoryCache = {};
   String formatPhoneForWhatsApp(String phone) {
     phone = phone.trim().replaceAll(" ", "");
 
@@ -80,8 +80,6 @@ class StagePdfGenerator {
     final projectUseCase = sl<GetProjectUseCase>();
     final projectResult = await projectUseCase.call();
     final taskResult = await taskUseCase.call();
-    Map<String, List<Uint8List>> imagesBeforeMap = {};
-    Map<String, List<Uint8List>> imagesAfterMap = {};
     // 🔹 Ajoute ce bloc pour debug
     projectResult.fold(
           (_) {},
@@ -158,8 +156,6 @@ class StagePdfGenerator {
     final subStagesSection = SubStagesSectionBuilder(
       subStages: subStages,
       tasks: filteredTasks,
-      imagesBeforeMap: imagesBeforeMap,
-      imagesAfterMap: imagesAfterMap,
       arabicFont: arabicFont,
       emojiFont: emojiFont,
       imageDownloadUrlMap: imageDownloadUrlMap,
@@ -190,10 +186,7 @@ class StagePdfGenerator {
     final List<String> allBeforeUrls = [];
     final List<String> allAfterUrls = [];
 
-    for (final t in filteredTasks) {
-      allBeforeUrls.addAll(t.imagesBefore ?? []);
-      allAfterUrls.addAll(t.imagesAfter ?? []);
-    }
+
 
     final projectTasks = tasksList.where((t) => t.projectId == projectId).toList();
 
@@ -214,27 +207,12 @@ class StagePdfGenerator {
     debugPrint("🔗 imageDownloadUrlMap size = ${imageDownloadUrlMap.length}");
 
 
-    debugPrint("Total BEFORE URLs = ${allBeforeUrls.length}");
-    debugPrint("Total AFTER URLs  = ${allAfterUrls.length}");
 
-// ========= Téléchargement global (beaucoup plus rapide) =========
-    final allBeforeImages = await _downloadImagesBatch(allBeforeUrls, batchSize: 8);
-    final allAfterImages  = await _downloadImagesBatch(allAfterUrls, batchSize: 8);
 
-    debugPrint("Downloaded BEFORE = ${allBeforeImages.length}");
-    debugPrint("Downloaded AFTER  = ${allAfterImages.length}");
 
-// ========= Resize global ( isolates ) =========
-    final resizedBefore = await Future.wait(
-      allBeforeImages.map(resizeImageInIsolate),
-    );
 
-    final resizedAfter = await Future.wait(
-      allAfterImages.map(resizeImageInIsolate),
-    );
 
-    debugPrint("Resized BEFORE = ${resizedBefore.length}");
-    debugPrint("Resized AFTER  = ${resizedAfter.length}");
+
 
 // ========= Redistribution vers chaque tâche =========
     int beforeIndex = 0;
@@ -244,17 +222,11 @@ class StagePdfGenerator {
       final nBefore = t.imagesBefore?.length ?? 0;
       final nAfter  = t.imagesAfter?.length ?? 0;
 
-      final taskBefore = resizedBefore.skip(beforeIndex).take(nBefore).toList();
-      final taskAfter  = resizedAfter.skip(afterIndex).take(nAfter).toList();
 
       beforeIndex += nBefore;
       afterIndex  += nAfter;
 
-      // Max 4 images
-      imagesBeforeMap[t.id ?? ""] = taskBefore.take(1).toList();
-      imagesAfterMap[t.id ?? ""]  = taskAfter.take(1).toList();
 
-      debugPrint("✔️ Tâche ${t.id} => ${taskBefore.length} before / ${taskAfter.length} after");
     }
     for (final url in allBeforeUrls) {
       debugPrint("URL BEFORE = $url");
@@ -558,8 +530,6 @@ class StagePdfGenerator {
 
       // téléchargement par batch
       final futures = batch.map((url) async {
-        final cached = _imageMemoryCache[url];
-        if (cached != null) return cached;
 
         try {
           final uri = Uri.parse(url);
@@ -568,7 +538,6 @@ class StagePdfGenerator {
           await http.get(uri).timeout(const Duration(seconds: 30));
 
           if (response.statusCode == 200) {
-            _imageMemoryCache[url] = response.bodyBytes;
             return response.bodyBytes;
           }
         } catch (e) {
@@ -605,28 +574,7 @@ class StagePdfGenerator {
 
 
 
-  Future<Uint8List> resizeImageInIsolate(Uint8List data) async {
-    try {
-      return await compute(_resizeImageSync, data);
-    } catch (e) {
-      debugPrint('resizeImageInIsolate failed: $e');
-      return data;
-    }
-  }
 
-  Uint8List _resizeImageSync(Uint8List data) {
-    try {
-      final original = img.decodeImage(data);
-      if (original == null) return data;
-
-      if (original.width <= 600) return data;
-
-      final resized = img.copyResize(original, width: 600);
-      return Uint8List.fromList(img.encodeJpg(resized, quality: 60));
-    } catch (_) {
-      return data;
-    }
-  }
   pw.Expanded buildInfoBox(String value, String titleAr, String titleEn, pw.Font arabicFont, pw.Font emojiFont, {String? icon, bool isAlternate = false,}) {
     final PdfColor primaryColor = isAlternate ? PdfColor.fromHex('#B8860B') : PdfColor.fromHex('#21206C');
     final PdfColor secondaryColor = PdfColor.fromHex('#E9EEF3');

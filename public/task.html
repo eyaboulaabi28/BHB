@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>صور المهمة</title>
+
+    <style>
+        body {
+            font-family: Arial, Tahoma;
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h2 {
+            color: #0E4D92;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .photo-card {
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .photo-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            font-size: 18px;
+            margin-top: 30px;
+        }
+
+        .empty {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-top: 30px;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            color: #0E4D92;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>📸 صور المهمة</h2>
+
+<div class="grid" id="images">
+    <div class="loading">⏳ جاري تحميل الصور...</div>
+</div>
+
+<script type="module">
+
+    import { initializeApp }
+        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+    import {
+        getFirestore,
+        doc,
+        getDoc
+    }
+        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ================= FIREBASE CONFIG =================
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCcp7l5I4ftPHAp6F6CMPR3pzRbNVx9dRw",
+        authDomain: "bhbgroup-ed1bc.firebaseapp.com",
+        projectId: "bhbgroup-ed1bc",
+        storageBucket: "bhbgroup-ed1bc.firebasestorage.app",
+        messagingSenderId: "259953238721",
+        appId: "1:259953238721:web:cdff9688f9f47ed8856a40"
+    };
+
+    // ================= INIT FIREBASE =================
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ================= URL PARAMS =================
+
+    const params = new URLSearchParams(window.location.search);
+
+    const taskId = params.get("taskId");
+    const projectId = params.get("projectId");
+
+    const container = document.getElementById("images");
+
+    // ================= VALIDATION =================
+
+    if (!taskId || !projectId) {
+
+        container.innerHTML = `
+            <div class="error">
+                ❌ taskId أو projectId مفقود
+            </div>
+        `;
+
+        throw new Error("taskId أو projectId مفقود");
+    }
+
+    // ================= LOAD TASK =================
+
+    async function loadTaskImages() {
+
+        try {
+
+            // جلب task مباشرة عبر document id
+            const taskRef = doc(db, "tasks", taskId);
+
+            const snapshot = await getDoc(taskRef);
+
+            // إذا المهمة غير موجودة
+            if (!snapshot.exists()) {
+
+                container.innerHTML = `
+                    <div class="error">
+                        ❌ المهمة غير موجودة
+                    </div>
+                `;
+
+                return;
+            }
+
+            const data = snapshot.data();
+
+            // حماية إضافية
+            if (data.projectId !== projectId) {
+
+                container.innerHTML = `
+                    <div class="error">
+                        ❌ هذه المهمة لا تنتمي لهذا المشروع
+                    </div>
+                `;
+
+                return;
+            }
+
+            // دمج الصور
+            const allImages = [
+                ...(data.imagesBefore || []),
+                ...(data.imagesAfter || [])
+            ];
+
+            // إذا لا توجد صور
+            if (allImages.length === 0) {
+
+                container.innerHTML = `
+                    <div class="empty">
+                        لا توجد صور لهذه المهمة
+                    </div>
+                `;
+
+                return;
+            }
+
+            // تنظيف loading
+            container.innerHTML = "";
+
+            // عرض الصور
+            let index = 1;
+
+            allImages.forEach(url => {
+
+                if (!url) return;
+
+                const card = document.createElement("div");
+                card.className = "photo-card";
+
+                const title = document.createElement("div");
+                title.className = "photo-title";
+                title.textContent = `الصورة رقم ${index}`;
+
+                const img = document.createElement("img");
+                img.src = url;
+                img.loading = "lazy";
+
+                card.appendChild(title);
+                card.appendChild(img);
+
+                container.appendChild(card);
+
+                index++;
+            });
+
+        } catch (e) {
+
+            console.error(e);
+
+            container.innerHTML = `
+                <div class="error">
+                    ❌ حدث خطأ أثناء تحميل الصور
+                </div>
+            `;
+        }
+    }
+
+    // ================= START =================
+
+    loadTaskImages();
+
+</script>
+
+</body>
+
+</html>
