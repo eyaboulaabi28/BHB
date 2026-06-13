@@ -1,6 +1,7 @@
 import 'package:app_bhb/data/auth/models/date_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_date.dart';
 import 'package:app_bhb/presentation/pages/attendance/attendance_page.dart';
+import 'package:app_bhb/presentation/pages/attendance_absent/attendace_absent_page.dart';
 import 'package:app_bhb/presentation/pages/check-in/check_in_page.dart';
 import 'package:app_bhb/presentation/pages/contact_us/contact_page.dart';
 import 'package:app_bhb/presentation/pages/customers/customers_page.dart';
@@ -14,6 +15,7 @@ import 'package:app_bhb/presentation/pages/engineers_results/engineers_results_p
 import 'package:app_bhb/presentation/pages/materials/materials_page.dart';
 import 'package:app_bhb/presentation/pages/meeting/meeting_page.dart';
 import 'package:app_bhb/presentation/pages/new_site/new_site_page.dart';
+import 'package:app_bhb/presentation/pages/projectFinal/project_final.dart';
 import 'package:app_bhb/presentation/pages/projects/projects_page.dart';
 import 'package:app_bhb/presentation/pages/settings/settings_page.dart';
 import 'package:app_bhb/presentation/pages/technician_results/technician_results_page.dart';
@@ -109,6 +111,13 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           "roles": ["admin", "engineer"],
         },
         {
+          "icon": Icons.access_alarm_outlined,
+          "color": Colors.red.shade300,
+          "title": "إدارة الغيابات",
+          "page": AttendanceAbsentPage(selectedType: "",projectName: "",),
+          "roles": ["admin", "engineer"],
+        },
+        {
           "icon": Icons.group,
           "color": Colors.blue.shade100,
           "title": " إدارة العملاء ",
@@ -135,6 +144,14 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           "color": Colors.yellowAccent.shade100,
           "title": "عرض المشاريع",
           "page": ProjectsPage(selectedType: widget.selectedType,userRole:widget.userRole,projectName: "",),
+          "roles": ["admin", "engineer", "customer"],
+
+        },
+        {
+          "icon": Icons.list_alt,
+          "color": Colors.green.shade200,
+          "title": " إدارة المشاريع المنتهية",
+          "page": ProjectFinal(selectedType: widget.selectedType,userRole:widget.userRole,projectName: "",),
           "roles": ["admin", "engineer", "customer"],
 
         },

@@ -41,18 +41,20 @@ class _AttendancePageState extends State<AttendancePage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  @override
   void initState() {
     super.initState();
-    _getAllEmployeeUseCase = sl<GetEmployeeUseCase>();
-    _createNotificationUseCase = sl<CreateNotificationUseCase>();
-    _isEmployeePresentToday = sl<IsEmployeePresentTodayUseCase>();
+
+    _getAllEmployeeUseCase = sl();
+    _createNotificationUseCase = sl();
+    _isEmployeePresentToday = sl();
+
     _loadCurrentUserProfile();
-    _fetchEmployees().then((_) {
-      _checkAndCreateAbsences();
-      _checkEmployeesPresence();
+
+    _fetchEmployees().then((_) async {
+      await _checkEmployeesPresence();
     });
   }
-
   Future<void> _loadCurrentUserProfile() async {
     final fbUser = FirebaseAuth.instance.currentUser;
 
@@ -90,44 +92,84 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
 
-  Future<void> _checkAndCreateAbsences() async {
-    final now = DateTime.now();
+  Future<void> generateYesterdayAbsences() async {
+    try {
+      final now = DateTime.now();
 
-    // 🟢 On prend hier
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
+      // ⛔ Ne pas exécuter avant 23h
+      if (now.hour < 23) return;
 
-    for (var employee in employees) {
-      final isPresent = await _isEmployeePresentToday.call(
-        employee.id!,
-        date: yesterday,
+      final yesterday = DateTime(
+        now.year,
+        now.month,
+        now.day - 1,
       );
 
-      if (!isPresent) {
-        // 🔴 Vérifier si absence déjà créée
-        final existing = await FirebaseFirestore.instance
-            .collection('attendance')
-            .where('employeeId', isEqualTo: employee.id)
-            .where('status', isEqualTo: 'absent')
-            .where('startTime',
-            isEqualTo: yesterday.toIso8601String())
-            .get();
+      final yesterdayDateString =
+          "${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}";
 
-        if (existing.docs.isEmpty) {
-          await FirebaseFirestore.instance.collection('attendance').add({
-            'employeeId': employee.id,
-            'employeeName': employee.firstName,
-            'status': 'absent',
-            'startTime': yesterday.toIso8601String(),
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        }
-      }
+      // 🔹 Récupérer tous les employés
+      final result = await sl<GetEmployeeUseCase>().call();
+
+      await result.fold(
+            (failure) async {
+          debugPrint("Error loading employees: $failure");
+        },
+            (employees) async {
+          for (var employee in employees) {
+            if (employee.id == null) continue;
+
+            // 🔹 Vérifier s’il a déjà une présence ou absence ce jour-là
+            final existing = await FirebaseFirestore.instance
+                .collection('attendance') // ⚠️ vérifie bien le nom
+                .where('employeeId', isEqualTo: employee.id)
+                .get();
+
+            bool alreadyExistsForYesterday = false;
+
+            for (var doc in existing.docs) {
+              final data = doc.data();
+
+              if (data['startTime'] == null) continue;
+
+              try {
+                final date = DateTime.parse(data['startTime']);
+
+                if (date.year == yesterday.year &&
+                    date.month == yesterday.month &&
+                    date.day == yesterday.day) {
+                  alreadyExistsForYesterday = true;
+                  break;
+                }
+              } catch (_) {}
+            }
+
+            if (alreadyExistsForYesterday) continue;
+
+            // 🔹 Vérifier si présent
+            final isPresent = await sl<IsEmployeePresentTodayUseCase>()
+                .call(employee.id!, date: yesterday);
+
+            // 🔴 Si absent → créer absence automatique
+            if (!isPresent) {
+              await FirebaseFirestore.instance.collection('attendance').add({
+                'employeeId': employee.id,
+                'employeeName': employee.firstName ?? '',
+                'status': 'absent',
+                'startTime': yesterday.toIso8601String(),
+                'createdAt': FieldValue.serverTimestamp(),
+                'notes': "غياب تلقائي (لم يتم تسجيل حضور)",
+              });
+
+              debugPrint("Absence created for ${employee.firstName}");
+            }
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint("generateYesterdayAbsences error: $e");
     }
   }
-
-
-
-
   Future<void> _fetchEmployees() async {
     final result = await _getAllEmployeeUseCase.call();
 
@@ -146,6 +188,116 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 
+
+ /* Future generateFridayAbsencesOnce({DateTime? testNow}) async {
+    final now = testNow ?? DateTime.now();
+
+    debugPrint("🚀 Running at $now");
+
+    final isFriday = now.weekday == DateTime.friday;
+    final isAfter23 = now.hour >= 23;
+
+    if (!isFriday || !isAfter23) {
+      debugPrint("⛔ Condition not met");
+      return;
+    }
+
+    final dateKey =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    final employeesSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('role', isEqualTo: 'employee')
+        .get();
+
+    debugPrint("👥 Employees: ${employeesSnapshot.docs.length}");
+
+    for (final emp in employeesSnapshot.docs) {
+      final employeeId = emp.id;
+      final docRef = FirebaseFirestore.instance
+          .collection('attendance')
+          .doc("${employeeId}_$dateKey");
+
+      final existing = await docRef.get();
+      if (existing.exists) continue;
+
+      try {
+        await docRef.set({
+          "employeeId": employeeId,
+          "employeeName": emp["firstName"] ?? emp["email"] ?? "",
+          "status": "absent",
+          "notes": " غياب تلقائي يوم الجمعة عطلة أسبوعية",
+          "startTime": now.toIso8601String(),
+          "endTime": now.toIso8601String(),
+          "workedOnFriday": false,
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+
+        debugPrint("✔ Created for $employeeId");
+      } catch (e) {
+        debugPrint("❌ Error: $e");
+      }
+    }
+  }*/
+  Future<void> generateFridayAbsencesOnce() async {
+    final now = DateTime.now();
+
+    debugPrint("🚀 Running Friday auto absence at $now");
+
+    // ❌ pas vendredi → stop
+    if (now.weekday != DateTime.friday) {
+      debugPrint("⛔ Not Friday");
+      return;
+    }
+
+    // ❌ avant 23h → stop
+    if (now.hour < 23) {
+      debugPrint("⛔ Before 23h");
+      return;
+    }
+
+    final dateKey =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    final employeesSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('role', isEqualTo: 'employee')
+        .get();
+
+    debugPrint("👥 Employees found: ${employeesSnapshot.docs.length}");
+
+    for (final emp in employeesSnapshot.docs) {
+      final employeeId = emp.id;
+
+      final docRef = FirebaseFirestore.instance
+          .collection('attendance')
+          .doc("${employeeId}_$dateKey");
+
+      final existing = await docRef.get();
+
+      if (existing.exists) {
+        debugPrint("✔ Already exists for $employeeId");
+        continue;
+      }
+
+      try {
+        await docRef.set({
+          "employeeId": employeeId,
+          "employeeName": emp["firstName"] ?? emp["email"] ?? "",
+          "status": "absent",
+          "notes": "غياب تلقائي يوم الجمعة (عطلة أسبوعية)",
+          "startTime": now.toIso8601String(),
+          "endTime": now.toIso8601String(),
+          "workedOnFriday": false,
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+
+        debugPrint("✔ Absence created for $employeeId");
+      } catch (e) {
+        debugPrint("❌ Firestore error: $e");
+      }
+    }
+  }
   void _filterEmployees(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -281,154 +433,159 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: filteredEmployees.isEmpty
-                  ? const Center(
-                child: Text(
-                  "لا يوجد موظفين مطابقون للبحث",
-                  style: TextStyle(
-                    fontFamily: 'Tajawal',
-                    color: Colors.grey,
-                  ),
-                ),
-              )
-                  :
-              ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: filteredEmployees.length,
-                itemBuilder: (context, index) {
-                  final employee = filteredEmployees[index];
-                  final isAlreadyPresent = _employeesPresence?[employee.id!] ?? false;
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                child: filteredEmployees.isEmpty
+                    ? const Center(
+                  child: Text(
+                    "لا يوجد موظفين مطابقون للبحث",
+                    style: TextStyle(
+                      fontFamily: 'Tajawal',
+                      color: Colors.grey,
                     ),
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(15),
-                      child: Row(
-                        textDirection: TextDirection.rtl,
-                        children: [
-                          CircleAvatar(
-                            radius: 25,
-                            backgroundColor: TColor.secondary.withOpacity(0.2),
-                            child: Icon(Icons.manage_accounts, color: TColor.primary),
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  employee.firstName ?? "",
-                                  style: const TextStyle(
-                                    fontFamily: 'Tajawal',
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  employee.email ?? "",
-                                  style: const TextStyle(
-                                    fontFamily: 'Tajawal',
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    Icon(Icons.phone, size: 16, color: Colors.grey),
-                                    const SizedBox(width: 5),
-                                    Expanded(
-                                      child: Text(
-                                        employee.phone ?? "",
-                                        style: const TextStyle(
-                                            fontFamily: 'Tajawal',
-                                            fontSize: 14,
-                                            color: Colors.grey),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                  ),
+                )
+                    :
+                ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: filteredEmployees.length,
+                  itemBuilder: (context, index) {
+                    final employee = filteredEmployees[index];
+                    final isAlreadyPresent = _employeesPresence?[employee.id!] ?? false;
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      elevation: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Row(
+                          textDirection: TextDirection.rtl,
+                          children: [
+                            CircleAvatar(
+                              radius: 25,
+                              backgroundColor: TColor.secondary.withOpacity(0.2),
+                              child: Icon(Icons.manage_accounts, color: TColor.primary),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    employee.firstName ?? "",
+                                    style: const TextStyle(
+                                      fontFamily: 'Tajawal',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                  ],
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    employee.email ?? "",
+                                    style: const TextStyle(
+                                      fontFamily: 'Tajawal',
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.phone, size: 16, color: Colors.grey),
+                                      const SizedBox(width: 5),
+                                      Expanded(
+                                        child: Text(
+                                          employee.phone ?? "",
+                                          style: const TextStyle(
+                                              fontFamily: 'Tajawal',
+                                              fontSize: 14,
+                                              color: Colors.grey),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 👁️ Bouton détails
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.visibility,
+                                    color: Colors.blue,
+                                    size: 26,
+                                  ),
+                                  tooltip: "عرض التفاصيل",
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AttendanceDetailsPage(
+                                          employee: employee,
+                                          selectedType: widget.selectedType,
+                                          projectName: widget.projectName,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
+
+                                // ➕ Bouton ajouter présence
+                                if (!isAlreadyPresent)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.add_circle,
+                                      color: Colors.green,
+                                      size: 28,
+                                    ),
+                                    tooltip: isAlreadyPresent
+                                        ? "تم تسجيل الحضور اليوم"
+                                        : "إضافة حضور",
+                                    onPressed: () {
+                                      if (isAlreadyPresent) {
+                                        // Afficher le SnackBar si déjà présent
+                                        CustomSnackBar.show(
+                                          context,
+                                          message: "تم تسجيل الحضور اليوم",
+                                          type: SnackBarType.info,
+                                        );
+                                      } else {
+                                        // Sinon ouvrir le modal pour ajouter la présence
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) => AddAttendanceModal(
+                                            title: "إضافة حضور و الانصراف للموظف",
+                                            submitButtonText: "إضافة",
+                                            employeeId: employee.id!,
+                                            initialEmployeeName: employee.firstName,
+                                            userRole: user.role ?? "",
+                                            onAdd: (values) {
+
+                                              _checkEmployeesPresence();
+                                              if (mounted) {
+                                                setState(() {});
+                                              }
+
+                                            },
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
                               ],
                             ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 👁️ Bouton détails
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.visibility,
-                                  color: Colors.blue,
-                                  size: 26,
-                                ),
-                                tooltip: "عرض التفاصيل",
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => AttendanceDetailsPage(
-                                        employee: employee,
-                                        selectedType: widget.selectedType,
-                                        projectName: widget.projectName,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-
-                              // ➕ Bouton ajouter présence
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.add_circle,
-                                  color: Colors.green,
-                                  size: 28,
-                                ),
-                                tooltip: isAlreadyPresent
-                                    ? "تم تسجيل الحضور اليوم"
-                                    : "إضافة حضور",
-                                onPressed: () {
-                                  if (isAlreadyPresent) {
-                                    // Afficher le SnackBar si déjà présent
-                                    CustomSnackBar.show(
-                                      context,
-                                      message: "تم تسجيل الحضور اليوم",
-                                      type: SnackBarType.info,
-                                    );
-                                  } else {
-                                    // Sinon ouvrir le modal pour ajouter la présence
-                                    showModalBottomSheet(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      backgroundColor: Colors.transparent,
-                                      builder: (context) => AddAttendanceModal(
-                                        title: "إضافة حضور و الانصراف للموظف",
-                                        submitButtonText: "إضافة",
-                                        employeeId: employee.id!,
-                                        initialEmployeeName: employee.firstName,
-                                        userRole: user.role ?? "",
-                                        onAdd: (values) {
-
-                                          _checkEmployeesPresence();
-                                        },
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              )
+                    );
+                  },
+                )
 
 
             ),

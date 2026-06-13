@@ -283,6 +283,27 @@ class _DatesPageState extends State<DatesPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 5),
+                                const SizedBox(height: 5),
+
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.build,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      d.typeDate ?? "",
+                                      style: const TextStyle(
+                                        fontFamily: 'Tajawal',
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
 
                                 Row(
                                   children: [
@@ -320,7 +341,9 @@ class _DatesPageState extends State<DatesPage> {
                               final dateController = TextEditingController(
                                 text: _formatDate(d.createdAt),
                               );
-
+                              final typeController = TextEditingController(
+                                text: d.typeDate ?? "",
+                              );
                               DateTime selectedDate = d.createdAt ?? DateTime.now();
                               DateStatus selectedStatus = d.status;
 
@@ -375,6 +398,18 @@ class _DatesPageState extends State<DatesPage> {
                                             ),
 
                                             const SizedBox(height: 15),
+                                            NewRoundSelectField(
+                                              hintText: "نوع الموعد",
+                                              controller: typeController,
+                                              options: const [
+                                                "كهرباء",
+                                                "سباكة",
+                                              ],
+                                              onChanged: (value) {
+                                                typeController.text = value ?? "";
+                                              },
+                                            ),
+                                            const SizedBox(height: 15),
 
                                             /// 🟢 Status select (NewRoundSelectField)
                                             NewRoundSelectField(
@@ -416,6 +451,8 @@ class _DatesPageState extends State<DatesPage> {
                                                         uidCustomer: d.uidCustomer,
                                                         createdAt: selectedDate,
                                                         status: selectedStatus,
+                                                        typeDate: typeController.text.trim(),
+
                                                       );
 
                                                       final result = await sl<UpdateDateUseCase>().call(
@@ -542,6 +579,7 @@ class _DatesPageState extends State<DatesPage> {
                         uidCustomer: values["uidCustomer"] ,
                         customerName: values["customerName"] ,
                         createdAt : values["createdAt"] ,
+                        typeDate : values["typeDate"] ,
                       ),
                     );
                     _reloadDates();

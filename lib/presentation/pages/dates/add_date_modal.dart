@@ -65,6 +65,7 @@ class _AddDateModalState extends State<AddDateModal> {
   DateTime? selectedDate;
   DateStatus selectedStatus = DateStatus.pending;
   final TextEditingController statusCtrl = TextEditingController();
+  final TextEditingController typeCtrl = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -232,6 +233,26 @@ class _AddDateModalState extends State<AddDateModal> {
                     ),
                   ),
 
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 15),
+                    child: NewRoundSelectField(
+                      hintText: "نوع الموعد",
+                      controller: typeCtrl,
+                      enableSearch: false,
+                      rightIcon: const Icon(Icons.flag_outlined),
+                      options: const [
+                        "كهرباء",
+                        "سباكة",
+                      ],
+                      onChanged: (String? value) {
+                        if (value == null || value.isEmpty) return;
+
+                        setState(() {
+                          selectedStatus = textToStatus(value.trim());
+                        });
+                      },
+                    ),
+                  ),
 
                   // Buttons
                   Row(
@@ -282,6 +303,7 @@ class _AddDateModalState extends State<AddDateModal> {
                                 uidCustomer: selectedCustomerId,
                                 createdAt: selectedDate,
                                 status: selectedStatus,
+                                typeDate: typeCtrl.text.trim(),
                               );
 
 
@@ -314,6 +336,7 @@ class _AddDateModalState extends State<AddDateModal> {
                                   widget.onAdd({
                                     "customerName": customerCtrl.text.trim(),
                                     "uidCustomer": selectedCustomerId,
+                                    "typeDate": typeCtrl.text.trim(),
                                     "createdAt":
                                     selectedDate ?? DateTime.now(),
                                   });

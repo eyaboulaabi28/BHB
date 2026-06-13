@@ -1,5 +1,6 @@
 import 'package:app_bhb/common/color_extension.dart';
 import 'package:app_bhb/presentation/pages/home/choose_service_screen.dart';
+import 'package:app_bhb/presentation/pages/home/home_page.dart';
 import 'package:app_bhb/presentation/pages/login/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,7 +88,15 @@ class _SplashScreenState extends State<SplashScreen> {
     final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
     if (isLoggedIn) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ChooseServiceScreen()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomeScreen(
+            selectedType: "",
+            projectName: "",
+          ),
+        ),
+      );
     } else {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage(email: '', password: '')));
     }

@@ -248,7 +248,11 @@ Future<void> initializeDependencies () async {
   // Attendance usecases
   sl.registerSingleton<AddAttendanceUseCase>(AddAttendanceUseCase());
   sl.registerSingleton<GetAttendanceUseCase>(GetAttendanceUseCase(sl<AttendanceRepository>()),);
-  sl.registerSingleton<GetAttendanceByIdUseCase>(GetAttendanceByIdUseCase(sl<AttendanceRepository>()),);
+  sl.registerSingleton<UpdateAttendanceStatusUseCase>(
+    UpdateAttendanceStatusUseCase(
+      sl<AttendanceRepository>(),
+    ),
+  );  sl.registerSingleton<GetAttendanceByIdUseCase>(GetAttendanceByIdUseCase(sl<AttendanceRepository>()),);
   sl.registerSingleton<GetAttendanceByEmployeeAndMonthUseCase>(GetAttendanceByEmployeeAndMonthUseCase(sl<AttendanceRepository>()),);
   sl.registerSingleton<IsEmployeePresentTodayUseCase>(
       IsEmployeePresentTodayUseCase()

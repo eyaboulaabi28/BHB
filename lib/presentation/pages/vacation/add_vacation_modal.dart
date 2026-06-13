@@ -1,12 +1,10 @@
-import 'package:app_bhb/common_widget/CustomSnackBar.dart';
-import 'package:app_bhb/common_widget/generic_form_modal.dart';
-import 'package:app_bhb/data/auth/models/vacation_model.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_notification.dart';
-import 'package:app_bhb/domain/auth/usecases/uses_cases_vacation.dart';
 import 'package:flutter/material.dart';
 import 'package:app_bhb/common/color_extension.dart';
+import 'package:app_bhb/common_widget/CustomSnackBar.dart';
+import 'package:app_bhb/common_widget/generic_form_modal.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
-
+import 'package:app_bhb/data/auth/models/vacation_model.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_vacation.dart';
 import '../../../service_locator.dart';
 
 class AddVacationModal extends StatefulWidget {
@@ -26,10 +24,9 @@ class AddVacationModal extends StatefulWidget {
 }
 
 class _AddVacationModalState extends State<AddVacationModal> {
-  final _createNotificationUseCase = sl<CreateNotificationUseCase>();
-
-  // Pour le champ date
   final Map<String, TextEditingController> _controllers = {};
+
+  DateTime? _selectedDate;
 
   @override
   void initState() {
@@ -39,42 +36,41 @@ class _AddVacationModalState extends State<AddVacationModal> {
   }
 
   Future<void> _selectDate(TextEditingController controller) async {
-    DateTime? pickedDate = await showDatePicker(
+    final now = DateTime.now();
+
+    final pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _selectedDate ?? now,
       firstDate: DateTime(1990),
       lastDate: DateTime(2100),
       locale: const Locale("ar", "SA"),
-      builder: (BuildContext context, Widget? child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Theme(
-            data: Theme.of(context),
-            child: child!,
-          ),
-        );
-      },
-      useRootNavigator: true,
     );
+
     if (pickedDate != null) {
-      controller.text = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+      setState(() {
+        _selectedDate = pickedDate;
+        controller.text =
+        "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final fields = <FormFieldConfig>[
+    final fields = [
       FormFieldConfig(
         key: "name",
         hint: "اسم العطلة",
         icon: const Icon(Icons.beach_access, color: Colors.grey),
-        validator: (v) => (v == null || v.isEmpty) ? "الرجاء إدخال اسم العطلة" : null,
+        validator: (v) =>
+        (v == null || v.isEmpty) ? "الرجاء إدخال اسم العطلة" : null,
       ),
       FormFieldConfig(
         key: "date",
         hint: "تاريخ العطلة",
         icon: const Icon(Icons.calendar_today, color: Colors.grey),
-        validator: (v) => (v == null || v.isEmpty) ? "الرجاء تحديد التاريخ" : null,
+        validator: (v) =>
+        (v == null || v.isEmpty) ? "الرجاء تحديد التاريخ" : null,
       ),
     ];
 
@@ -98,20 +94,35 @@ class _AddVacationModalState extends State<AddVacationModal> {
       },
 
       onSubmit: (values) async {
+        if (_selectedDate == null) {
+          CustomSnackBar.show(
+            context,
+            message: "الرجاء اختيار التاريخ",
+            type: SnackBarType.error,
+          );
+          return;
+        }
+
         final newVacation = Vacation(
           id: "",
           nameVacation: values["name"].trim(),
-          dateVacation: DateTime.tryParse(values["date"].trim()),
+          dateVacation: _selectedDate,
         );
 
-        final result = await sl<AddVacationUseCase>().call(params: newVacation);
+        final result =
+        await sl<AddVacationUseCase>().call(params: newVacation);
 
         result.fold(
               (error) {
-            CustomSnackBar.show(context, message: error, type: SnackBarType.error);
+            CustomSnackBar.show(
+              context,
+              message: error,
+              type: SnackBarType.error,
+            );
           },
               (addedVac) {
             Navigator.pop(context);
+
             CustomSnackBar.show(
               context,
               message: "تمت إضافة العطلة بنجاح",
@@ -129,5 +140,3 @@ class _AddVacationModalState extends State<AddVacationModal> {
     );
   }
 }
-
-

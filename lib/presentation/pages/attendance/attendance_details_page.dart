@@ -46,6 +46,7 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
 
     _loadAttendancesByDateRange();
   }
+
   Future<void> _loadAttendancesByDateRange() async {
     if (startDate == null || endDate == null) {
       CustomSnackBar.show(
@@ -354,7 +355,7 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                         const Icon(Icons.date_range_outlined, size: 20, color: Colors.black),
                                         const SizedBox(width: 5),
                                         Text(
-                                          "التاريخ: ${_formatDateTime(a.createdAt)}",
+                                          "التاريخ: ${_formatDateTime(a.endTime)}",
                                           style: const TextStyle(
                                             fontFamily: 'Tajawal',
                                             fontSize: 14,
@@ -376,40 +377,151 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 5),
+
                                     if (a.status != null)
-                                      Row(
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Icon(
-                                            a.status == 'present'
-                                                ? Icons.check_circle
-                                                : a.status == 'conge'
-                                                ? Icons.beach_access
-                                                : Icons.cancel,
-                                            color: a.status == 'present'
-                                                ? Colors.green
-                                                : a.status == 'conge'
-                                                ? Colors.orange
-                                                : Colors.red,
+
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                a.status == 'present'
+                                                    ? Icons.check_circle
+                                                    : a.status == 'conge'
+                                                    ? Icons.beach_access
+                                                    : Icons.cancel,
+                                                color: a.status == 'present'
+                                                    ? Colors.green
+                                                    : a.status == 'conge'
+                                                    ? Colors.orange
+                                                    : Colors.red,
+                                              ),
+                                              const SizedBox(width: 5),
+                                              Text(
+                                                a.status == 'present'
+                                                    ? "حاضر"
+                                                    : a.status == 'conge'
+                                                    ? "إجازة"
+                                                    : "غائب",
+                                                style: const TextStyle(
+                                                  fontFamily: 'Tajawal',
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            a.status == 'present'
-                                                ? "حاضر"
-                                                : a.status == 'conge'
-                                                ? "إجازة"
-                                                : "غائب",
-                                            style: const TextStyle(
-                                              fontFamily: 'Tajawal',
-                                              fontSize: 14,
+
+                                          const SizedBox(height: 5),
+
+                                          /// 🔴 ABSENCE REASON (NEW)
+                                          if (a.absenceReason != null &&
+                                              a.absenceReason!.trim().isNotEmpty)
+                                            Container(
+                                              margin: const EdgeInsets.only(top: 5),
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade50,
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: Colors.red.shade200),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.info_outline,
+                                                    size: 16,
+                                                    color: Colors.red,
+                                                  ),
+                                                  const SizedBox(width: 5),
+                                                  Expanded(
+                                                    child: Text(
+                                                      a.absenceReason!,
+                                                      style: const TextStyle(
+                                                        fontFamily: 'Tajawal',
+                                                        fontSize: 13,
+                                                        color: Colors.red,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
                                         ],
+                                      ),
+
+                                    if ((a.notes ?? "").isNotEmpty)
+                                      Container(
+                                        width: double.infinity,
+                                        margin: const EdgeInsets.only(top: 8),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: a.notes!.contains("غياب")
+                                              ? Colors.red.shade50
+                                              : Colors.green.shade50,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: a.notes!.contains("غياب")
+                                                ? Colors.red.shade200
+                                                : Colors.green.shade200,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(
+                                              a.notes!.contains("غياب")
+                                                  ? Icons.event_busy
+                                                  : Icons.work_history,
+                                              color: a.notes!.contains("غياب")
+                                                  ? Colors.red
+                                                  : Colors.green,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                a.notes!,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Tajawal',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        width: double.infinity,
+                                        margin: const EdgeInsets.only(top: 8),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            Icon(Icons.info_outline, color: Colors.grey),
+                                            SizedBox(width: 10),
+                                            Text(
+                                              " لا يوجد ملاحظات",
+                                              style: TextStyle(
+                                                fontFamily: 'Tajawal',
+                                                fontSize: 14,
+                                                color: Colors.grey,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                   ],
                                 ),
-
-
-
 
                               ],
                             ),

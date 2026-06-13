@@ -149,215 +149,302 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
       );
     }
 
+    /// ===============================
+    /// Statistiques globales du projet
+    /// ===============================
+
+    final int totalProjectDays = attendances
+        .where((e) => e.status == "present")
+        .length;
+
+    final int totalAbsences = attendances
+        .where((e) => e.status == "absent")
+        .length;
+
+    final int totalVacations = attendances
+        .where((e) => e.status == "conge")
+        .length;
+
+    double totalProjectCost = 0;
+
+    /// Calcul du coût total
+    for (final employeeName in uniqueEmployees) {
+      final employeeAttendances = attendances
+          .where((e) => e.employeeName == employeeName)
+          .toList();
+
+      final employeeId = employeeAttendances.isNotEmpty
+          ? employeeAttendances.first.employeeId
+          : null;
+
+      Employees? employeeData;
+
+      try {
+        employeeData = employees.firstWhere(
+              (e) => e.id == employeeId,
+        );
+      } catch (_) {
+        try {
+          employeeData = employees.firstWhere(
+                (e) => (e.firstName ?? "")
+                .trim()
+                .toLowerCase()
+                .contains(
+              employeeName.trim().toLowerCase(),
+            ),
+          );
+        } catch (_) {
+          employeeData = Employees(
+            dailyWage: 0,
+          );
+        }
+      }
+
+      final totalDays = employeeAttendances
+          .where((e) => e.status == "present")
+          .length;
+
+      final dailyWage = employeeData.dailyWage ?? 0;
+
+      totalProjectCost += totalDays * dailyWage;
+    }
+
     return Directionality(
-      textDirection: TextDirection.rtl,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          border: TableBorder.all(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(12),
-          ),
+        textDirection: TextDirection.rtl,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-          headingRowColor: MaterialStateProperty.all(
-            Colors.blue.withOpacity(0.1),
-          ),
-
-          dataRowColor: MaterialStateProperty.all(
-            Colors.white,
-          ),
-
-          columnSpacing: 25,
-          horizontalMargin: 16,
-
-          columns: const [
-            DataColumn(
-              label: Text(
-                "الموظف",
-                style: TextStyle(
-                  fontFamily: 'Tajawal',
-                  fontWeight: FontWeight.bold,
+          /// ===============================
+          /// Résumé du projet
+          /// ===============================
+          Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(
+                color: Colors.blue.shade200,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildStatCard(
+                  icon: Icons.calendar_month,
+                  color: Colors.green,
+                  title: "أيام العمل",
+                  value: "$totalProjectDays",
                 ),
+                const SizedBox(width: 20),
+                _buildStatCard(
+                  icon: Icons.attach_money,
+                  color: Colors.teal,
+                  title: "تكلفة المشروع",
+                  value: "${totalProjectCost.toStringAsFixed(2)} د.ت",
+                ),
+              ],
+            ),          ),
+
+          /// ===============================
+          /// Tableau
+          /// ==============================
+
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: MediaQuery.of(context).size.width,
+                    ),
+                    child: DataTable(
+                      border: TableBorder.all(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      headingRowColor: WidgetStateProperty.all(
+                        Colors.blue.withOpacity(0.1),
+                      ),
+                      columns: const [
+                        DataColumn(
+                          label: Text(
+                            "الموظف",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "أيام العمل",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "التكلفة",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                      rows: uniqueEmployees.map((employeeName) {
+                        final employeeAttendances = attendances
+                            .where((e) => e.employeeName == employeeName)
+                            .toList();
+
+                        final employeeId = employeeAttendances.isNotEmpty
+                            ? employeeAttendances.first.employeeId
+                            : null;
+
+                        Employees? employeeData;
+
+                        try {
+                          employeeData = employees.firstWhere(
+                                (e) => e.id == employeeId,
+                          );
+                        } catch (_) {
+                          employeeData = Employees(dailyWage: 0);
+                        }
+
+                        final totalDays = employeeAttendances
+                            .where((e) => e.status == "present")
+                            .length;
+
+                        final dailyWage = employeeData.dailyWage ?? 0;
+
+                        final totalCost = totalDays * dailyWage;
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 15,
+                                    backgroundColor: Colors.blue.withOpacity(0.15),
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 16,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    employeeName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month,
+                                    color: Colors.green,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    "$totalDays",
+                                    style: const TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.attach_money,
+                                    color: Colors.teal,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    "${totalCost.toStringAsFixed(2)} د.ت",
+                                    style: const TextStyle(
+                                      color: Colors.teal,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              )            ],
+          ),
+        ),
+    );
+  }
+  Widget _buildStatCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String value,
+  }) {
+    return SizedBox(
+      width: 140,
+      height: 130, // 👈 FIX HEIGHT IMPORTANT
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              blurRadius: 4,
+              color: Colors.black12,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // 👈 centre vertical
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 25,
+            ),
+            const SizedBox(height: 8),
+
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis, // 👈 empêche débordement
+              style: const TextStyle(
+                fontFamily: 'Tajawal',
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
               ),
             ),
 
-            DataColumn(
-              label: Text(
-                "أيام العمل",
-                style: TextStyle(
-                  fontFamily: 'Tajawal',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            const SizedBox(height: 6),
 
-
-            DataColumn(
-              label: Text(
-                "التكلفة",
-                style: TextStyle(
-                  fontFamily: 'Tajawal',
-                  fontWeight: FontWeight.bold,
-                ),
+            Text(
+              value,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
-
-          rows: uniqueEmployees.map((employeeName) {
-
-            /// 🔹 سجلات الموظف
-            final employeeAttendances = attendances.where(
-                  (e) => e.employeeName == employeeName,
-            ).toList();
-
-            /// 🔹 employeeId
-            final employeeId = employeeAttendances.isNotEmpty
-                ? employeeAttendances.first.employeeId
-                : null;
-
-            Employees? employeeData;
-
-            try {
-
-              /// 🔹 البحث بالـ ID
-              employeeData = employees.firstWhere(
-                    (e) => e.id == employeeId,
-              );
-
-            } catch (_) {
-
-              try {
-
-                /// 🔹 fallback بالاسم
-                employeeData = employees.firstWhere(
-                      (e) =>
-                      (e.firstName ?? "")
-                          .trim()
-                          .toLowerCase()
-                          .contains(
-                        employeeName.trim().toLowerCase(),
-                      ),
-                );
-
-              } catch (_) {
-
-                employeeData = Employees(
-                  dailyWage: 0,
-                );
-              }
-            }
-
-            debugPrint("========== MATCH ==========");
-            debugPrint("Employee Name: $employeeName");
-            debugPrint("Employee ID: $employeeId");
-            debugPrint("Found Wage: ${employeeData.dailyWage}");
-
-            /// 🔹 أيام الحضور فقط
-            final totalDays = employeeAttendances.where(
-                  (e) => e.status == "present",
-            ).length;
-
-            /// 🔹 الغيابات
-            final absences = employeeAttendances.where(
-                  (e) => e.status == "absent",
-            ).length;
-
-            /// 🔹 الإجازات
-            final vacations = employeeAttendances.where(
-                  (e) => e.status == "conge",
-            ).length;
-
-            /// 🔹 الأجر اليومي
-            final dailyWage = employeeData.dailyWage ?? 0;
-
-            /// 🔹 التكلفة
-            final totalCost = totalDays * dailyWage;
-
-            return DataRow(
-              cells: [
-
-                /// 🔹 الموظف
-                DataCell(
-                  Row(
-                    children: [
-
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor:
-                        Colors.blue.withOpacity(0.15),
-
-                        child: const Icon(
-                          Icons.person,
-                          size: 18,
-                          color: Colors.blue,
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      Text(
-                        employeeName,
-                        style: const TextStyle(
-                          fontFamily: 'Tajawal',
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                /// 🔹 أيام العمل
-                DataCell(
-                  Row(
-                    children: [
-
-                      const Icon(
-                        Icons.calendar_month,
-                        color: Colors.green,
-                        size: 18,
-                      ),
-
-                      const SizedBox(width: 5),
-
-                      Text(
-                        "$totalDays",
-                        style: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-
-
-                /// 🔹 التكلفة
-                DataCell(
-                  Row(
-                    children: [
-
-                      const Icon(
-                        Icons.attach_money,
-                        color: Colors.teal,
-                        size: 18,
-                      ),
-
-                      const SizedBox(width: 5),
-
-                      Text(
-                        "${totalCost.toStringAsFixed(2)} د.ت",
-                        style: const TextStyle(
-                          color: Colors.teal,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
         ),
       ),
     );

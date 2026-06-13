@@ -181,10 +181,14 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const ChooseServiceScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const HomeScreen(
+                    selectedType: "",
+                    projectName: "",
+                  ),
+                ),
                     (route) => false,
-              );
-            },
+              );            },
           ),
         ),
 

@@ -11,10 +11,12 @@ class Date {
   String? customerName;
   DateTime? createdAt;
   String? uidCustomer;
+  String? typeDate;
   DateStatus status;
 
   Date({
     this.id,
+    this.typeDate,
     this.customerName,
     this.uidCustomer,
     DateTime? createdAt,
@@ -24,6 +26,7 @@ class Date {
   Map<String, dynamic> toMap() {
     return {
       'customerName': customerName,
+      'typeDate': typeDate,
       'uidCustomer': uidCustomer,
       'createdAt': createdAt?.toIso8601String(),
       'status': status.name, // 👈 نحفظها String
@@ -34,6 +37,7 @@ class Date {
     return Date(
       id: id,
       customerName: map['customerName'],
+      typeDate: map['typeDate'],
       uidCustomer: map['uidCustomer'],
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])

@@ -34,4 +34,21 @@ class AttendanceRepositoryImpl extends AttendanceRepository {
     return await sl<AttendanceFirebaseService>().getAttendanceByEmployeeAndDateRange(employeeId, start, end);
   }
 
+
+
+  @override
+  Future<Either> updateAttendanceStatus(
+      String attendanceId,
+      String status,
+      String reason,
+      ) async {
+
+    return await sl<AttendanceFirebaseService>()
+        .updateAttendanceStatus(
+      attendanceId,
+      status,
+      reason,
+    );
+  }
+
 }

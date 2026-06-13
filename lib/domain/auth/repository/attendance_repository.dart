@@ -8,5 +8,10 @@ abstract class AttendanceRepository {
   Future<Either> getAttendanceByEmployeeAndDateRange(
       String employeeId, DateTime start, DateTime end);
   Future<bool> isEmployeePresentToday(String employeeId, {DateTime? date});
+  Future<Either> updateAttendanceStatus(
+      String attendanceId,
+      String status,
+      String reason,
+      );
 
 }

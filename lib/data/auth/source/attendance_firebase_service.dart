@@ -11,10 +11,13 @@ abstract class AttendanceFirebaseService {
   Future<Either> addAttendance(Attendance attendance);
   Future<Either> getAllAttendance();
   Future<Either> getAttendanceById(String id);
-  Future<Either> getAttendanceByEmployeeAndDateRange(
-      String employeeId, DateTime start, DateTime end);
-
+  Future<Either> getAttendanceByEmployeeAndDateRange(String employeeId, DateTime start, DateTime end);
   Future<bool> isEmployeePresentToday(String employeeId, {DateTime? date});
+  Future updateAttendanceStatus(
+      String attendanceId,
+      String status,
+      String reason,
+      );
 
 }
 class AttendanceFirebaseServiceImpl extends AttendanceFirebaseService {
@@ -97,6 +100,33 @@ class AttendanceFirebaseServiceImpl extends AttendanceFirebaseService {
       return snapshot.docs.isNotEmpty;
     } catch (e) {
       return false;
+    }
+  }
+
+  @override
+  Future updateAttendanceStatus(
+      String attendanceId,
+      String status,
+      String reason,
+      ) async {
+
+    try {
+
+      await _attendanceCollection
+          .doc(attendanceId)
+          .update({
+        'status': status,
+        'absenceReason': reason,
+      });
+
+      return const Right(
+        'attendance updated successfully',
+      );
+
+    } catch (e) {
+
+      return Left(e.toString());
+
     }
   }
 

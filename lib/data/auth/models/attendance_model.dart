@@ -15,6 +15,8 @@ class Attendance {
   String? status;
   bool? hasDeduction;
   String? deductionReason;
+  bool? workedOnFriday;
+  String? absenceReason;
 
   Attendance({
     this.id,
@@ -31,6 +33,8 @@ class Attendance {
     DateTime? createdAt,
     this.hasDeduction,
     this.deductionReason,
+    this.workedOnFriday,
+    this.absenceReason,
   }) : createdAt = createdAt ?? DateTime.now();
 
   /// 🔹 Convert object to Map (Firestore / API)
@@ -49,6 +53,8 @@ class Attendance {
       'status': status,
       'hasDeduction': hasDeduction,
       'deductionReason': deductionReason,
+      'workedOnFriday': workedOnFriday,
+      'absenceReason': absenceReason,
     };
   }
 
@@ -82,6 +88,8 @@ class Attendance {
       status: map['status'],
       hasDeduction: map['hasDeduction'],
       deductionReason: map['deductionReason'],
+      workedOnFriday: map['workedOnFriday'],
+      absenceReason: map['absenceReason'],
     );
   }
 

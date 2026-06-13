@@ -6,9 +6,12 @@ import 'package:app_bhb/common_widget/NewRoundSelectField.dart';
 import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/attendance_model.dart';
 import 'package:app_bhb/data/auth/models/customers_model.dart';
+import 'package:app_bhb/data/auth/models/date_model.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_attendance.dart';
 import 'package:app_bhb/domain/auth/usecases/uses_cases_customers.dart';
+import 'package:app_bhb/domain/auth/usecases/uses_cases_date.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -80,6 +83,59 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
+  Future<void> checkAutoFridayAbsence() async {
+    final now = DateTime.now();
+
+    // ✅ فقط الجمعة
+    final isFriday = now.weekday == DateTime.friday;
+
+    // ✅ فقط بعد 23h
+    if (!isFriday || now.hour < 23) return;
+
+    final employeesSnapshot =
+    await FirebaseFirestore.instance.collection('Employees').get();
+
+    for (final emp in employeesSnapshot.docs) {
+      final employeeId = emp.id;
+
+      // check si déjà attendance aujourd’hui
+      final today = DateTime(now.year, now.month, now.day);
+
+      final existing = await FirebaseFirestore.instance
+          .collection('Attendance')
+          .where('employeeId', isEqualTo: employeeId)
+          .get();
+
+      bool alreadyExists = false;
+
+      for (final doc in existing.docs) {
+        final data = doc.data();
+        if (data['startTime'] == null) continue;
+
+        final date = DateTime.parse(data['startTime']);
+
+        if (date.year == today.year &&
+            date.month == today.month &&
+            date.day == today.day) {
+          alreadyExists = true;
+          break;
+        }
+      }
+
+      if (!alreadyExists) {
+        await FirebaseFirestore.instance.collection('Attendance').add({
+          "employeeId": employeeId,
+          "employeeName": emp["name"],
+          "status": "absent",
+          "notes": "غياب تلقائي يوم الجمعة",
+          "startTime": DateTime(now.year, now.month, now.day, 0, 0).toIso8601String(),
+          "endTime": DateTime(now.year, now.month, now.day, 0, 0).toIso8601String(),
+          "workedOnFriday": false,
+          "hasDeduction": false,
+        });
+      }
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -88,8 +144,8 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
     _loadAttendanceTime();
     _controllers = {
       "employeeName": TextEditingController(text: widget.initialEmployeeName ?? ""),
-       "date": TextEditingController(text: _formatDate(DateTime.now())),
-     // "date": TextEditingController(text: "2026-05-08"),
+      "date": TextEditingController(text: _formatDate(DateTime.now())),
+     // "date": TextEditingController(text: "2026-06-12"),
       "startTime": TextEditingController(),
       "endTime": TextEditingController(),
       "waitingHours": TextEditingController(),
@@ -155,18 +211,6 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
     }
   }
 
-  double _parseHoursTextToDecimal(String text) {
-    try {
-      final regex = RegExp(r"(\d+)\s*ساعة\s*و\s*(\d+)\s*دقيقة");
-      final match = regex.firstMatch(text);
-      if (match != null) {
-        final hours = int.parse(match.group(1)!);
-        final minutes = int.parse(match.group(2)!);
-        return hours + minutes / 60.0;
-      }
-    } catch (_) {}
-    return 0.0;
-  }
 
 
   String _formatDate(DateTime date) =>
@@ -385,17 +429,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                         color: Colors.grey,
                       ),
                     ),
-                    if (isAdmin) ...[
-                      const SizedBox(width: 8),
-                      const Text(
-                        "(الرجاء إدخال الوقت بصيغة: ساعة:دقيقة مثل 08:30)",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 12,
-                          fontFamily: 'Tajawal',
-                        ),
-                      ),
-                    ]
+
                   ],
                 ),
                 const SizedBox(height: 5),
@@ -403,7 +437,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                   hintText: "بداية الدوام",
                   controller: _controllers["startTime"],
                   right: const Icon(Icons.login),
-                  readOnly: !isAdmin,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -417,17 +451,6 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                         color: Colors.grey,
                       ),
                     ),
-                    if (isAdmin) ...[
-                      const SizedBox(width: 8),
-                      const Text(
-                        "(الرجاء إدخال الوقت بصيغة: ساعة:دقيقة مثل 08:30)",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 12,
-                          fontFamily: 'Tajawal',
-                        ),
-                      ),
-                    ]
                   ],
                 ),
                 const SizedBox(height: 5),
@@ -465,7 +488,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                           rightIcon: const Icon(Icons.access_time),
                           onChanged: (value) {
                             final now = DateTime.now();
-
+                           // final now = DateTime(2026, 6, 12);
                             final endParts = _controllers["endTime"]!.text.split(":");
                             if (endParts.length != 2) return;
 
@@ -484,6 +507,7 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                               });
                               return;
                             }
+
 
                             setState(() {
                               hoursErrorMessage = null;
@@ -736,31 +760,102 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             _calculateDiffFromStartToEndDecimal().replaceAll(',', '.'),
                           ) ??
                               0.0;
-                          final selectedDate = DateTime.tryParse(_controllers["date"]!.text);
-                          final isFriday = selectedDate?.weekday == DateTime.friday;
 
+
+                          final selectedDate = DateTime.parse(_controllers["date"]!.text);
+                          final selectedDateParts = _controllers["date"]!.text.split("-");
+
+                          final baseDate = DateTime(
+                            int.parse(selectedDateParts[0]),
+                            int.parse(selectedDateParts[1]),
+                            int.parse(selectedDateParts[2]),
+                          );
+
+                          final startParts = _controllers["startTime"]!.text.split(":");
+                          final endParts = _controllers["endTime"]!.text.split(":");
+
+                          final startTime = DateTime(
+                            baseDate.year,
+                            baseDate.month,
+                            baseDate.day,
+                            int.parse(startParts[0]),
+                            int.parse(startParts[1]),
+                          );
+
+                          final endTime = DateTime(
+                            baseDate.year,
+                            baseDate.month,
+                            baseDate.day,
+                            int.parse(endParts[0]),
+                            int.parse(endParts[1]),
+                          );
+
+
+                          final existingAttendance = await FirebaseFirestore.instance
+                              .collection('Attendance')
+                              .where('employeeId', isEqualTo: widget.employeeId)
+                              .get();
+
+                          bool alreadyExists = false;
+
+                          for (final doc in existingAttendance.docs) {
+                            final data = doc.data();
+
+                            if (data['startTime'] == null) continue;
+
+                            try {
+                              final attendanceDate =
+                              DateTime.parse(data['startTime']);
+
+                              if (attendanceDate.year == selectedDate.year &&
+                                  attendanceDate.month == selectedDate.month &&
+                                  attendanceDate.day == selectedDate.day) {
+                                alreadyExists = true;
+                                break;
+                              }
+                            } catch (_) {}
+                          }
+
+                          if (alreadyExists) {
+                            CustomSnackBar.show(
+                              context,
+                              message: "يوجد تسجيل حضور أو غياب لهذا الموظف في هذا اليوم",
+                              type: SnackBarType.error,
+                            );
+
+                            setState(() => _isSubmitting = false);
+                            return;
+                          }
+                          bool isFriday = selectedDate.weekday == DateTime.friday;
+
+                          String status = "present";
                           String? waitingHours;
                           String? overtimeHours;
-                          String status = "present";
-                          String? notes = _controllers["notes"]?.text.trim();
+                          String? notes;
 
-                          if (isFriday == true) {
+                          // 🔴 CAS 1 : vendredi
+                          if (isFriday) {
                             if (isWorkingFriday == true) {
-                              // ✅ Travaille vendredi → overtime
+                              // ✅ travaille vendredi
+                              status = "present";
+
                               overtimeHours = _calculateDiffFromStartToEndDecimal();
                               waitingHours = null;
 
-                              notes = (notes ?? "") + " | عمل يوم الجمعة (ساعات إضافية)";
+                              notes = "يوم الجمعة عمل (ساعات إضافية)";
                             } else {
-                              // ❌ Congé vendredi
-                              overtimeHours = null;
-                              waitingHours = null;
-                              status = "conge";
+                              // ❌ congé vendredi
+                              status = "absent";
 
-                              notes = "يوم الاجازة الجمعة";
+                              waitingHours = null;
+                              overtimeHours = null;
+
+                              notes = "يوم الجمعة إجازة (غياب تلقائي)";
                             }
-                          } else {
-                            // 🔹 comportement normal
+                          }
+
+                          // 🔵 CAS 2 : jour normal
+                          else {
                             waitingHours = selectedHoursType == "waiting"
                                 ? _controllers["waitingHours"]!.text.trim()
                                 : null;
@@ -768,28 +863,65 @@ class _AddAttendanceModalState extends State<AddAttendanceModal> {
                             overtimeHours = selectedHoursType == "overtime"
                                 ? _controllers["overtimeHours"]!.text.trim()
                                 : null;
+
+                            notes = _controllers["notes"]?.text.trim().isNotEmpty == true
+                                ? _controllers["notes"]!.text.trim()
+                                : null;
                           }
 
                           // 🔹 Créer l'objet Attendance
                           final attendance = Attendance(
                             employeeId: widget.employeeId,
                             employeeName: _controllers["employeeName"]?.text.trim(),
-                            startTime: DateTime.tryParse(
-                                "${_controllers["date"]?.text} ${_controllers["startTime"]?.text}"),
-                            endTime: DateTime.tryParse(
-                                "${_controllers["date"]?.text} ${_controllers["endTime"]?.text}"),
+                            startTime: startTime,
+                            endTime: endTime,
                             waitingHours: waitingHours,
                             overtimeHours: overtimeHours,
                             customerName: customerCtrl.text.trim(),
                             signatureUrl: signatureUrl,
                             notes: notes,
                             status: status,
+                            workedOnFriday: isFriday ? isWorkingFriday : null,
                             hasDeduction: hasDeduction,
                             deductionReason: deductionReasonController.text.trim().isEmpty
                                 ? null
                                 : deductionReasonController.text.trim(),
 
                           );
+                          debugPrint("=== ADD ATTENDANCE ===");
+                          debugPrint("Employee: ${attendance.employeeName}");
+                          debugPrint("Status: ${attendance.status}");
+                          debugPrint("Notes: ${attendance.notes}");
+
+                          final customerName = customerCtrl.text.trim();
+
+                          final dateResult = await sl<GetDateUseCase>().call(
+                            userId: FirebaseAuth.instance.currentUser!.uid,
+                            role: widget.userRole ?? "",
+                          );
+
+                          dateResult.fold(
+                                (_) {},
+                                (dates) async {
+                              for (final d in dates) {
+                                if (d.customerName?.trim() == customerName) {
+                                  await sl<UpdateDateUseCase>().call(
+                                    params: {
+                                      "id": d.id!,
+                                      "date": Date(
+                                        id: d.id,
+                                        customerName: d.customerName,
+                                        uidCustomer: d.uidCustomer,
+                                        createdAt: d.createdAt,
+                                        status: DateStatus.completed,
+                                      ),
+                                    },
+                                  );
+                                }
+                              }
+                            },
+                          );
+
 
                           // 🔹 Ajouter dans Firebase
                           final result =

@@ -63,5 +63,20 @@ class IsEmployeePresentTodayUseCase {
   }
 }
 
+class UpdateAttendanceStatusUseCase implements UseCase<Either, Map<String, dynamic>> {
 
+  final AttendanceRepository repository;
 
+  UpdateAttendanceStatusUseCase(this.repository);
+
+  @override
+  Future<Either> call({
+    Map<String, dynamic>? params,
+  }) async {
+    return await repository.updateAttendanceStatus(
+      params!['attendanceId'],
+      params['status'],
+      params['reason'],
+    );
+  }
+}

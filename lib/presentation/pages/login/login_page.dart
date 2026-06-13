@@ -4,6 +4,7 @@ import 'package:app_bhb/common_widget/round_textfield.dart';
 import 'package:app_bhb/data/auth/models/user_signin_req.dart';
 import 'package:app_bhb/domain/auth/usecases/signin.dart';
 import 'package:app_bhb/presentation/pages/home/choose_service_screen.dart';
+import 'package:app_bhb/presentation/pages/home/home_page.dart';
 import 'package:app_bhb/presentation/pages/login/forgotpassword_page.dart';
 import 'package:app_bhb/presentation/pages/login/signup_page.dart';
 import 'package:flutter/material.dart';
@@ -243,7 +244,12 @@ class _LoginPageState extends State<LoginPage> {
                                     // ✅
                                     Navigator.pushAndRemoveUntil(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const ChooseServiceScreen()),
+                                      MaterialPageRoute(
+                                        builder: (_) => const HomeScreen(
+                                          selectedType: "",
+                                          projectName: "",
+                                        ),
+                                      ),
                                           (route) => false,
                                     );
                                   },
