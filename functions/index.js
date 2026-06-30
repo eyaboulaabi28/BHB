@@ -14,7 +14,19 @@ exports.generateAbsencesDaily = onSchedule(
     async () => {
       const db = admin.firestore();
       const now = new Date();
-      const dateKey = now.toISOString().split("T")[0];
+
+      const dateKey = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Africa/Tunis",
+      }).format(now);
+
+      const isFriday =
+      new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        timeZone: "Africa/Tunis",
+      }).format(now) === "Fri";
+
+      console.log("📅 Date:", dateKey);
+      console.log("📌 Friday:", isFriday);
 
       const employeesSnapshot = await db
           .collection("Users")
@@ -23,106 +35,92 @@ exports.generateAbsencesDaily = onSchedule(
 
       const batch = db.batch();
 
-      for (const doc of employeesSnapshot.docs) {
-        const emp = doc.data();
+      for (const employeeDoc of employeesSnapshot.docs) {
+        const employeeId = employeeDoc.id;
+        const employeeData = employeeDoc.data();
 
-        const ref = db.collection("attendance").doc(`${doc.id}_${dateKey}`);
+        // Vérifier si un attendance existe déjà aujourd'hui
+        const attendanceSnapshot = await db
+            .collection("attendance")
+            .where("employeeId", "==", employeeId)
+            .get();
 
-        const existing = await ref.get();
+        let alreadyExists = false;
 
-        // ❌ إذا يوجد attendance لا نلمسها
-        if (existing.exists) {
-          const data = existing.data();
+        for (const attendanceDoc of attendanceSnapshot.docs) {
+          const attendanceData = attendanceDoc.data();
 
-          if (data.status === "present") {
-            continue; // حاضر → لا نغير شيء
+          if (!attendanceData.startTime) continue;
+
+          try {
+            let attendanceDate;
+
+            if (
+              attendanceData.startTime &&
+              typeof attendanceData.startTime.toDate === "function"
+            ) {
+              attendanceDate = attendanceData.startTime.toDate();
+            } else {
+              attendanceDate = new Date(attendanceData.startTime);
+            }
+
+            const attendanceDateKey =
+            new Intl.DateTimeFormat("en-CA", {
+              timeZone: "Africa/Tunis",
+            }).format(attendanceDate);
+
+            if (attendanceDateKey === dateKey) {
+              alreadyExists = true;
+              break;
+            }
+          } catch (e) {
+            console.error(
+                "❌ Error parsing attendance date:",
+                attendanceDoc.id,
+                e,
+            );
           }
+        }
 
-          // إذا absent أو أي حالة أخرى → نتركه
+        if (alreadyExists) {
+          console.log(
+              `✔ Attendance already exists for ${employeeId}`,
+          );
           continue;
         }
 
-        // ✅ إذا لا يوجد أي attendance → نعتبره absent
-        batch.set(ref, {
-          employeeId: doc.id,
-          employeeName: emp.firstName || "",
-          status: "absent",
-          notes: "غياب تلقائي (لم يتم تسجيل حضور)",
+        const absenceRef = db
+            .collection("attendance")
+            .doc(`${employeeId}_${dateKey}`);
+
+        batch.set(absenceRef, {
+          employeeId,
+          employeeName:
+          employeeData.firstName ||
+          employeeData.email ||
+          "",
+          status: isFriday ? "present" : "absent",
+          notes: isFriday ?
+            "يوم الجمعة (يوم عطلة أسبوعية)" :
+            "غياب",
+          workedOnFriday: isFriday ? false : null,
+
           startTime: now.toISOString(),
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          endTime: now.toISOString(),
+
+          createdAt:
+          admin.firestore.FieldValue.serverTimestamp(),
         });
+
+        console.log(
+            `❌ Auto absence created for ${employeeId}`,
+        );
       }
 
       await batch.commit();
 
-      console.log("Absences generated safely");
-    });
-exports.generateFridayAbsencesOnce = onSchedule(
-    {
-      schedule: "0 23 * * *",
-      timeZone: "Africa/Tunis",
-    },
-    async () => {
-      const db = admin.firestore();
-      const now = new Date();
-
-      console.log("🚀 Running auto absence job at", now);
-
-      // ✅ only Friday
-      if (now.getDay() !== 5) {
-        console.log("⛔ Not Friday, exit");
-        return;
-      }
-
-      // 📌 stable date key (local-safe)
-      const dateKey = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Africa/Tunis",
-      }).format(now); // YYYY-MM-DD
-
-      console.log("📅 Target date:", dateKey);
-
-      const employeesSnapshot = await db
-          .collection("Users")
-          .where("role", "==", "employee")
-          .get();
-
-      console.log("👥 Employees:", employeesSnapshot.size);
-
-      for (const emp of employeesSnapshot.docs) {
-        const employeeId = emp.id;
-
-        const docRef = db
-            .collection("attendance")
-            .doc(`${employeeId}_${dateKey}`);
-
-        const existing = await docRef.get();
-
-        // ✅ avoid duplicates
-        if (existing.exists) {
-          console.log("✔ Already exists:", employeeId);
-          continue;
-        }
-
-        try {
-          await docRef.set({
-            employeeId,
-            employeeName: emp.data().firstName || emp.data().email || "",
-            status: "absent",
-
-            notes: "غياب تلقائي يوم الجمعة (يوم عطلة أسبوعية)",
-
-            startTime: now.toISOString(),
-            endTime: now.toISOString(),
-
-            workedOnFriday: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          console.log("✔ Absence created:", employeeId);
-        } catch (err) {
-          console.error("❌ Error for", employeeId, err);
-        }
-      }
-
+      console.log("✅ Daily absences generated successfully");
       return null;
-    });
+    },
+);
+

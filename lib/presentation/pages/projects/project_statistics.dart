@@ -244,15 +244,12 @@ class _ProjectStatisticsState extends State<ProjectStatistics> {
                   icon: Icons.attach_money,
                   color: Colors.teal,
                   title: "تكلفة المشروع",
-                  value: "${totalProjectCost.toStringAsFixed(2)} د.ت",
+                  value: "${totalProjectCost.toStringAsFixed(2)} ريال",
                 ),
               ],
             ),          ),
 
-          /// ===============================
           /// Tableau
-          /// ==============================
-
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Align(

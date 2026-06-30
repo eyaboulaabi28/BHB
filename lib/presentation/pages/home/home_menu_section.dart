@@ -58,18 +58,8 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
     }
   }
 
-  bool isLate(Date d) {
-    if (d.createdAt == null) return false;
 
-    final today = DateTime.now();
-    final dateOnly = DateTime(today.year, today.month, today.day);
-
-    return d.createdAt!.isBefore(dateOnly) &&
-        d.status != DateStatus.completed &&
-        d.status != DateStatus.cancelled;
-  }
-
-  Future<void> _fetchPendingDates() async {
+  Future _fetchPendingDates() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     final result = await sl<GetDateUseCase>().call(
@@ -81,21 +71,39 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
           (_) => setState(() => isLoading = false),
           (list) {
         setState(() {
-          pendingDates = list
-              .where((d) => d.status == DateStatus.pending)
-              .where((d) => !isLate(d))
-              .toList();
+          pendingDates = list.where((d) {
+            return _calculateStatus(d) == DateStatus.pending;
+          }).toList();
 
-          lateDates = list
-              .where((d) => d.status == DateStatus.late)
-              .toList();
+          lateDates = list.where((d) {
+            return _calculateStatus(d) == DateStatus.late;
+          }).toList();
 
           isLoading = false;
         });
       },
     );
   }
+  DateStatus _calculateStatus(Date d) {
+    if (d.createdAt == null) return DateStatus.pending;
 
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final dateOnly = DateTime(
+      d.createdAt!.year,
+      d.createdAt!.month,
+      d.createdAt!.day,
+    );
+
+    final diff = today.difference(dateOnly).inDays;
+
+    if (diff >= 1) {
+      return DateStatus.late;
+    }
+
+    return DateStatus.pending;
+  }
 
 
 
@@ -402,7 +410,7 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    "${d.customerName ?? "بدون اسم"} - ${_remainingDaysText(d.createdAt)}",
+                "${d.customerName ?? "بدون اسم"} - ${d.typeDate ?? "غير محدد"} - ${_remainingDaysText(d.createdAt)}"     ,
                     style: const TextStyle(
                       fontFamily: 'Tajawal',
                       fontSize: 14,
@@ -466,7 +474,7 @@ class _HomeMenuSectionState extends State<HomeMenuSection> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    "${d.customerName ?? "بدون اسم"} - ${_remainingDaysText(d.createdAt)}",
+    "${d.customerName ?? "بدون اسم"} - ${d.typeDate ?? "غير محدد"} - ${_remainingDaysText(d.createdAt)}"       ,
                     style: const TextStyle(
                       fontFamily: 'Tajawal',
                       fontSize: 14,

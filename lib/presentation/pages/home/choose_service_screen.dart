@@ -76,7 +76,7 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         _buildServiceCard(
                           label1: "مؤسسات",
                           label2: "تجارية",
-                          image: "assets/img/1.png",
+                          image: "",
                           value: "commercial",
                           imgSize: cardImageSize,
                           radioSize: radioSize,
@@ -85,7 +85,7 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         _buildServiceCard(
                           label1: "منازل",
                           label2: "سكنية",
-                          image: "assets/img/2.png",
+                          image: "",
                           value: "residential",
                           imgSize: cardImageSize,
                           radioSize: radioSize,
@@ -98,7 +98,7 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         _buildServiceCard(
                           label1: "أماكن",
                           label2: "عامة",
-                          image: "assets/img/4.png",
+                          image: "",
                           value: "public",
                           imgSize: cardImageSize,
                           radioSize: radioSize,
@@ -107,7 +107,7 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         _buildServiceCard(
                           label1: "أماكن",
                           label2: "صناعية",
-                          image: "assets/img/5.png",
+                          image: "",
                           value: "industrial",
                           imgSize: cardImageSize,
                           radioSize: radioSize,

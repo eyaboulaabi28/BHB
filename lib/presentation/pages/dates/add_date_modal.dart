@@ -88,12 +88,6 @@ class _AddDateModalState extends State<AddDateModal> {
     switch (text) {
       case "قيد الانتظار":
         return DateStatus.pending;
-      case "مؤكد":
-        return DateStatus.confirmed;
-      case "منجز":
-        return DateStatus.completed;
-      case "ملغى":
-        return DateStatus.cancelled;
       case "متأخر":
         return DateStatus.late;
       default:
@@ -132,12 +126,8 @@ class _AddDateModalState extends State<AddDateModal> {
     switch (status) {
       case DateStatus.pending:
         return "قيد الانتظار";
-      case DateStatus.confirmed:
-        return "مؤكد";
       case DateStatus.completed:
         return "منجز";
-      case DateStatus.cancelled:
-        return "ملغى";
       case DateStatus.late:
         return "متأخر";
 

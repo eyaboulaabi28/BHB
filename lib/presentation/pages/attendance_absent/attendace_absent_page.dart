@@ -34,6 +34,10 @@ class _AttendanceAbsentPageState extends State<AttendanceAbsentPage> {
   List<Attendance> filteredAbsentAttendances = [];
 
   final TextEditingController _searchController = TextEditingController();
+  DateTime? startDate;
+  DateTime? endDate;
+  bool isLoading = false;
+  List<Attendance> attendances = [];
 
   @override
   void initState() {
@@ -41,8 +45,88 @@ class _AttendanceAbsentPageState extends State<AttendanceAbsentPage> {
     _getAttendanceUseCase = sl<GetAttendanceUseCase>();
     _loadCurrentUserProfile();
     _loadAbsentAttendances();
+    final now = DateTime.now();
 
+    // Début du mois courant
+    startDate = DateTime(now.year, now.month, 1);
+
+    // Fin du mois courant
+    final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+    // Si la fin du mois est dans le futur, prendre aujourd'hui
+    endDate = endOfMonth.isAfter(now) ? now : endOfMonth;
   }
+
+  Future _loadAbsentAttendances1() async {
+    final result = await _getAttendanceUseCase.call();
+
+    result.fold(
+          (failure) {
+        print(failure);
+      },
+          (data) {
+        final attendances = data as List<Attendance>;
+
+        final start = startDate != null
+            ? DateTime(
+          startDate!.year,
+          startDate!.month,
+          startDate!.day,
+          0,
+          0,
+          0,
+        )
+            : null;
+
+        final end = endDate != null
+            ? DateTime(
+          endDate!.year,
+          endDate!.month,
+          endDate!.day,
+          23,
+          59,
+          59,
+        )
+            : null;
+
+        final absents = attendances.where((attendance) {
+          final status =
+          attendance.status?.trim().toLowerCase();
+
+          final reason =
+          attendance.absenceReason?.trim();
+
+          final isAbsent = status == "absent";
+
+          final isAlreadyProcessed =
+              reason == "غياب بدون عذر";
+
+          bool isInRange = true;
+
+          if (start != null &&
+              end != null &&
+              attendance.createdAt != null) {
+            isInRange =
+                attendance.createdAt!.isAfter(
+                    start.subtract(const Duration(seconds: 1))) &&
+                    attendance.createdAt!.isBefore(
+                        end.add(const Duration(seconds: 1)));
+          }
+
+          return isAbsent &&
+              !isAlreadyProcessed &&
+              isInRange;
+        }).toList();
+
+        setState(() {
+          absentAttendances = absents;
+          filteredAbsentAttendances = absents;
+        });
+      },
+    );
+  }
+
+
 
   Future<void> _loadCurrentUserProfile() async {
     final fbUser = FirebaseAuth.instance.currentUser;
@@ -156,6 +240,84 @@ class _AttendanceAbsentPageState extends State<AttendanceAbsentPage> {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: 25),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(startDate != null
+                      ? "من: ${startDate!.year}-${startDate!.month.toString().padLeft(2,'0')}-${startDate!.day.toString().padLeft(2,'0')}"
+                      : "اختر تاريخ البداية"),
+                  onPressed: () async {
+                    final now = DateTime.now();
+
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: startDate != null &&
+                          !startDate!.isAfter(now)
+                          ? startDate!
+                          : now,
+                      firstDate: DateTime(2020),
+                      lastDate: now,
+                      helpText: "اختر تاريخ البداية",
+                      locale: const Locale('ar'),
+                    );
+
+                    if (picked != null) {
+                      setState(() {
+                        startDate = picked;
+
+                        if (endDate != null && endDate!.isBefore(startDate!)) {
+                          endDate = startDate;
+                        }
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 15),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(endDate != null
+                      ? "إلى: ${endDate!.year}-${endDate!.month.toString().padLeft(2,'0')}-${endDate!.day.toString().padLeft(2,'0')}"
+                      : "اختر تاريخ النهاية"),
+                  onPressed: () async {
+                    final now = DateTime.now();
+
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: endDate != null &&
+                          !endDate!.isAfter(now)
+                          ? endDate!
+                          : now,
+                      firstDate: startDate ?? DateTime(2020),
+                      lastDate: now,
+                      helpText: "اختر تاريخ النهاية",
+                      locale: const Locale('ar'),
+                    );
+
+                    if (picked != null) {
+                      setState(() {
+                        endDate = picked;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 15),
+                ElevatedButton(
+                  onPressed: () {
+                    if (startDate != null && endDate != null) {
+                      _loadAbsentAttendances1();
+                    } else {
+                      CustomSnackBar.show(context,
+                          message: "يرجى اختيار تاريخ البداية والنهاية",
+                          type: SnackBarType.info);
+                    }
+                  },
+                  child: const Text("بحث"),
+                ),
+              ],
             ),
             const SizedBox(height: 15),
             CustomSearchBar(

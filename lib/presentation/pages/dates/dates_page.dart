@@ -45,34 +45,20 @@ class _DatesPageState extends State<DatesPage> {
     switch (status) {
       case DateStatus.pending:
         return "قيد الانتظار";
-      case DateStatus.confirmed:
-        return "مؤكد";
-      case DateStatus.completed:
-        return "منتهي";
-      case DateStatus.cancelled:
-        return "ملغي";
+        case DateStatus.completed:
+        return "منجز";
       case DateStatus.late:
         return "متأخر";
-
     }
   }
-
   DateStatus _statusFromText(String text) {
     switch (text) {
-      case "مؤكد":
-        return DateStatus.confirmed;
-      case "منتهي":
-        return DateStatus.completed;
-      case "ملغي":
-        return DateStatus.cancelled;
       case "متأخر":
         return DateStatus.late;
       default:
         return DateStatus.pending;
-
     }
   }
-
   bool isLoading = true;
 
   @override
@@ -159,34 +145,26 @@ class _DatesPageState extends State<DatesPage> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  DateStatus calculateAutoStatus(Date d) {
-    if (d.createdAt == null) return d.status;
-
-    // الحالات النهائية لا تتغير
-    if (d.status == DateStatus.completed ||
-        d.status == DateStatus.cancelled) {
-      return d.status;
-    }
+  DateStatus _calculateStatus(Date d) {
+    if (d.createdAt == null) return DateStatus.pending;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+
     final dateOnly = DateTime(
       d.createdAt!.year,
       d.createdAt!.month,
       d.createdAt!.day,
     );
 
-    final diffDays = today.difference(dateOnly).inDays;
+    final diff = today.difference(dateOnly).inDays;
 
-    if (diffDays > 3) {
-      return DateStatus.cancelled;
-    } else if (diffDays >= 1) {
+    if (diff >= 1) {
       return DateStatus.late;
-    } else {
-      return d.status; // pending / confirmed
     }
-  }
 
+    return DateStatus.pending;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -612,10 +590,6 @@ class _DatesPageState extends State<DatesPage> {
         color = Colors.amber;
         text = "قيد الانتظار";
         break;
-      case DateStatus.confirmed:
-        color = Colors.blue;
-        text = "مؤكد";
-        break;
       case DateStatus.completed:
         color = Colors.green;
         text = "منتهي";
@@ -623,10 +597,6 @@ class _DatesPageState extends State<DatesPage> {
       case DateStatus.late:
         color = Colors.deepOrange;
         text = "متأخر";
-        break;
-      case DateStatus.cancelled:
-        color = Colors.red;
-        text = "ملغي";
         break;
     }
 

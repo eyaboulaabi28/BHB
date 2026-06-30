@@ -355,7 +355,7 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                         const Icon(Icons.date_range_outlined, size: 20, color: Colors.black),
                                         const SizedBox(width: 5),
                                         Text(
-                                          "التاريخ: ${_formatDateTime(a.endTime)}",
+                                          "التاريخ: ${_formatDateTime(a.startTime)}",
                                           style: const TextStyle(
                                             fontFamily: 'Tajawal',
                                             fontSize: 14,
@@ -419,38 +419,60 @@ class _AttendanceDetailsPageState extends State<AttendanceDetailsPage> {
                                           if (a.absenceReason != null &&
                                               a.absenceReason!.trim().isNotEmpty)
                                             Container(
-                                              margin: const EdgeInsets.only(top: 5),
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 6,
-                                              ),
+                                              margin: const EdgeInsets.only(top: 8),
+                                              padding: const EdgeInsets.all(12),
                                               decoration: BoxDecoration(
                                                 color: Colors.red.shade50,
-                                                borderRadius: BorderRadius.circular(12),
+                                                borderRadius: BorderRadius.circular(14),
                                                 border: Border.all(color: Colors.red.shade200),
                                               ),
                                               child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  const Icon(
-                                                    Icons.info_outline,
-                                                    size: 16,
-                                                    color: Colors.red,
+                                                  Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red.shade100,
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.report_problem_outlined,
+                                                      color: Colors.red,
+                                                      size: 18,
+                                                    ),
                                                   ),
-                                                  const SizedBox(width: 5),
+                                                  const SizedBox(width: 10),
                                                   Expanded(
-                                                    child: Text(
-                                                      a.absenceReason!,
-                                                      style: const TextStyle(
-                                                        fontFamily: 'Tajawal',
-                                                        fontSize: 13,
-                                                        color: Colors.red,
-                                                      ),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        const Text(
+                                                          'سبب الغياب',
+                                                          style: TextStyle(
+                                                            fontFamily: 'Tajawal',
+                                                            fontSize: 13,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Colors.red,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(
+                                                          a.absenceReason?.trim().isNotEmpty == true
+                                                              ? a.absenceReason!
+                                                              : 'لا يوجد سبب محدد',
+                                                          style: TextStyle(
+                                                            fontFamily: 'Tajawal',
+                                                            fontSize: 14,
+                                                            color: Colors.grey.shade800,
+                                                            height: 1.4,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
                                                 ],
                                               ),
-                                            ),
-                                        ],
+                                            )                                        ],
                                       ),
 
                                     if ((a.notes ?? "").isNotEmpty)

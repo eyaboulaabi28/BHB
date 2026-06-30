@@ -1,9 +1,7 @@
 enum DateStatus {
   pending,
-  confirmed,
-  completed,
-  cancelled,
   late,
+  completed,
 }
 
 class Date {
